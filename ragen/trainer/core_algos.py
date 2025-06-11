@@ -7,7 +7,8 @@ def compute_bi_level_gae_advantage_return(
         loss_mask: torch.Tensor,
         gamma: float,
         lam: float,
-        high_level_gamma: float
+        high_level_gamma: float,
+        response_mask: torch.Tensor = None
     ):
     """Modified GAE calculation that compute two level of advantage and return:
     high level: per-turn wise
@@ -26,6 +27,8 @@ def compute_bi_level_gae_advantage_return(
             discounted factor used in RL for per-turn reward
         lam: `(float)`
             lambda value when computing Generalized Advantage Estimation
+        response_mask: `(torch.Tensor)` optional
+            shape: (bs, response_length). 1 for LLM generation, 0 for observation. Used to find turn boundaries.
 
     Returns:
         advantages: `(torch.Tensor)`
@@ -35,7 +38,28 @@ def compute_bi_level_gae_advantage_return(
     """
     with torch.no_grad():
         token_level_rewards = token_level_rewards.float()
-        reward_mask = token_level_rewards.bool()
+        
+        # Determine eos positions based on response_mask if provided
+        if response_mask is not None:
+            # Use response_mask to find turn boundaries
+            # Find the last token of each response turn (where response_mask goes from 1 to 0)
+            batch_size, seq_len = response_mask.shape
+            reward_mask = torch.zeros_like(response_mask, dtype=torch.float)
+            
+            for b in range(batch_size):
+                # Find positions where response_mask changes from 1 to 0 (end of response turns)
+                response_seq = response_mask[b]
+                
+                # Method: find all positions where current token is 1 and next token is 0 (or end of sequence)
+                for i in range(seq_len):
+                    if response_seq[i] == 1:  # Current token is part of response
+                        # Check if this is the end of a response turn
+                        if i == seq_len - 1 or response_seq[i + 1] == 0:  # Last token or next is observation
+                            reward_mask[b, i] = 1.0
+        else:
+            # Use traditional reward mask
+            reward_mask = token_level_rewards.bool()
+            
         batch_size, gen_len = token_level_rewards.shape
         advantages = torch.zeros_like(token_level_rewards)
         returns = torch.zeros_like(token_level_rewards)
@@ -43,8 +67,9 @@ def compute_bi_level_gae_advantage_return(
         
         for b in range(batch_size):
             # First, calculate high level advantage and return for eos token of each turn using high level gamma
-            eos_positions=reward_mask[b].nonzero(as_tuple=True)[0]
+            eos_positions = reward_mask[b].nonzero(as_tuple=True)[0]
             lastgaelam = 0.0
+            
             for i in range(len(eos_positions) - 1, -1, -1):
                 curr_pos = eos_positions[i]
                 
