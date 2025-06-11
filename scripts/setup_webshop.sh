@@ -20,8 +20,8 @@ print_step() {
 # TODO: merge this with the main setup script with an option to install webshop
 # Install if you want to use webshop
 conda install -c pytorch faiss-cpu -y
-sudo apt update
-sudo apt install default-jdk
+apt update
+apt install default-jdk
 conda install -c conda-forge openjdk=21 maven -y
 
 # Install remaining requirements

@@ -61,6 +61,7 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch:
         data.batch["response_mask"] = compute_response_mask(data)
+    # breakpoint()
     # prepare response group
     # TODO: add other ways to estimate advantages
     if adv_estimator == AdvantageEstimator.GAE:
@@ -72,6 +73,7 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
                 gamma=gamma,
                 lam=lam,
                 high_level_gamma=high_level_gamma,
+                response_mask=data.batch["response_mask"],
             )
         else:
             advantages, returns = core_algos.compute_gae_advantage_return(
@@ -418,7 +420,6 @@ class RayAgentTrainer(VerlRayPPOTrainer):
          to construct the PPO dataflow.
         The light-weight advantage computation is done on the driver process.
         """
-
         from omegaconf import OmegaConf
 
         from verl.utils.tracking import Tracking
@@ -619,7 +620,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                     # compute advantages, executed on the driver process
 
                     norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True)  # GRPO adv normalization factor
-
+                    
                     batch = compute_advantage(
                         batch,
                         adv_estimator=self.config.algorithm.adv_estimator,

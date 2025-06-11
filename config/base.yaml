@@ -5,7 +5,7 @@ defaults:
 system:
   CUDA_VISIBLE_DEVICES: "0"
 
-micro_batch_size_per_gpu: 4
+micro_batch_size_per_gpu: 1
 ppo_mini_batch_size: 32
 model_path: Qwen/Qwen2.5-0.5B-Instruct
 enable_response_mask: True # Enabling response mask could improve stability of rollout/old_log_prob, as P(st|history) are no longer calculated in loss here. See https://docs.google.com/document/d/1bg7obeiKTExuHHBl5uOiSpec5uLDZ2Tgvxy6li5pHX4/edit?usp=sharing for more details.
@@ -86,7 +86,7 @@ algorithm:
 trainer:
   project_name: ragen_latest
   experiment_name: test
-  total_training_steps: 200
+  total_training_steps: 400
   validation_steps: 1 # validation instances = validation_steps * val_env_groups * group_size
   val_before_train: True
   n_gpus_per_node: 1
