@@ -1,4 +1,6 @@
 set -e
+export JAVA_HOME=/usr/lib/jvm/java-1.21.0-openjdk-amd64
+export JVM_PATH=$JAVA_HOME/lib/server/libjvm.so
 
 # Section 1: Base Experiments
 USE_GRPO="algorithm.adv_estimator=grpo agent_proxy.reward_normalization.method=mean_std actor_rollout_ref.actor.use_kl_loss=True"
@@ -10,8 +12,14 @@ USE_BASE="algorithm.kl_ctrl.kl_coef=0.001 actor_rollout_ref.actor.kl_loss_coef=0
 #     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
 #     trainer.nnodes=1
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_3b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3,4,5,6,7\" trainer.n_gpus_per_node=8 \
-    trainer.experiment_name=webshop-3b-ppo-bi-level $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=True algorithm.high_level_gamma=0.95 \
+MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1\" trainer.n_gpus_per_node=2 \
+    trainer.experiment_name=webshop-1.5b-ppo-multi-turn-300 $USE_PPO $USE_BASE \
+    algorithm.bi_level_gae=True algorithm.high_level_gamma=0.0 \
     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
     trainer.nnodes=1
+
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1\" trainer.n_gpus_per_node=2 \
+#     trainer.experiment_name=webshop-1.5b-ppo $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1

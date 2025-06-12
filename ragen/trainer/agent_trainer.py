@@ -66,15 +66,24 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
     # TODO: add other ways to estimate advantages
     if adv_estimator == AdvantageEstimator.GAE:
         if bi_level_gae:
-            advantages, returns = core_algos.compute_bi_level_gae_advantage_return(
-                token_level_rewards=data.batch["token_level_rewards"],
-                values=data.batch["values"],
-                loss_mask=data.batch["response_mask"],
-                gamma=gamma,
-                lam=lam,
-                high_level_gamma=high_level_gamma,
-                response_mask=data.batch["response_mask"],
-            )
+            if high_level_gamma == 0.0:
+                advantages, returns = core_algos.compute_gae_advantage_return_multi_turn(
+                    token_level_rewards=data.batch["token_level_rewards"],
+                    values=data.batch["values"],
+                    response_mask=data.batch["response_mask"],
+                    gamma=gamma,
+                    lam=lam,
+                )
+            else:
+                advantages, returns = core_algos.compute_bi_level_gae_advantage_return(
+                    token_level_rewards=data.batch["token_level_rewards"],
+                    values=data.batch["values"],
+                    loss_mask=data.batch["response_mask"],
+                    gamma=gamma,
+                    lam=lam,
+                    high_level_gamma=high_level_gamma,
+                    response_mask=data.batch["response_mask"],
+                )
         else:
             advantages, returns = core_algos.compute_gae_advantage_return(
                 token_level_rewards=data.batch["token_level_rewards"],
@@ -423,7 +432,8 @@ class RayAgentTrainer(VerlRayPPOTrainer):
         from omegaconf import OmegaConf
 
         from verl.utils.tracking import Tracking
-
+        # breakpoint()
+        
         logger = Tracking(
             project_name=self.config.trainer.project_name,
             experiment_name=self.config.trainer.experiment_name,

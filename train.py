@@ -171,9 +171,14 @@ def run_ppo(config) -> None:
                 'TOKENIZERS_PARALLELISM': 'true',
                 'NCCL_DEBUG': 'WARN',
                 'VLLM_LOGGING_LEVEL': 'WARN',
-                "RAY_DEBUG": "legacy" # used here for simpler breakpoint()
+                # "RAY_DEBUG_POST_MORTEM": "1"
+                # "RAY_DEBUG": "legacy" # used here for simpler breakpoint()
             }
-        })
+        },
+        _temp_dir="/mnt/data1/zhan9359/ray_tmp",
+        num_gpus=2,
+        num_cpus=20,
+    )
 
     runner = TaskRunner.remote()
     ray.get(runner.run.remote(config))

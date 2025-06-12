@@ -86,7 +86,7 @@ algorithm:
 trainer:
   project_name: ragen_latest
   experiment_name: test
-  total_training_steps: 200
+  total_training_steps: 300
   validation_steps: 1 # validation instances = validation_steps * val_env_groups * group_size
   val_before_train: True
   n_gpus_per_node: 1

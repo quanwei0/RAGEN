@@ -93,7 +93,6 @@ def compute_bi_level_gae_advantage_return(
             for i, pos in enumerate(eos_positions):
                 returns[b, pos] = advantages[b, pos] + values[b, pos]
                 updated_reward[b, pos] = advantages[b, pos] + values[b, pos]
-            
             # Then, calculate low level advantage and return for each token using gamma, assume the reward for the sequence now is the return at eos token
             lastgaelam = 0.0
             valid_positions = loss_mask[b].nonzero(as_tuple=True)[0]
@@ -340,10 +339,10 @@ if __name__ == "__main__":
         [ 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0 ] 
     ], dtype=torch.float)
     
-    # adv1, ret1 = compute_bi_level_gae_advantage_return(rewards, values1, eos_mask, gamma, lam, high_level_gamma=1, response_mask=eos_mask)
+    adv1, ret1 = compute_bi_level_gae_advantage_return(rewards, values1, eos_mask, gamma, lam, high_level_gamma=0, response_mask=eos_mask)
     # adv2, ret2 = compute_bi_level_gae_advantage_return(rewards, values2, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask)
-    adv1, ret1 = compute_gae_advantage_return(rewards, values1, eos_mask, gamma, lam)
-    adv2, ret2 = compute_gae_advantage_return(rewards, values2, eos_mask, gamma, lam)
+    # adv1, ret1 = compute_gae_advantage_return(rewards, values1, eos_mask, gamma, lam)
+    adv2, ret2 = compute_gae_advantage_return_multi_turn(rewards, values2, eos_mask, gamma, lam)
 
     ret1 *= eos_mask
     ret2 *= eos_mask
