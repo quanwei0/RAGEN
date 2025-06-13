@@ -171,7 +171,7 @@ def run_ppo(config) -> None:
                 'TOKENIZERS_PARALLELISM': 'true',
                 'NCCL_DEBUG': 'WARN',
                 'VLLM_LOGGING_LEVEL': 'WARN',
-                "RAY_DEBUG": "legacy" # used here for simpler breakpoint()
+                # "RAY_DEBUG": "legacy" # used here for simpler breakpoint()
             }
         })
 
