@@ -8,7 +8,7 @@ model_path: Qwen/Qwen2.5-1.5B-Instruct
 trainer:
   experiment_name: webshop
   logger: [ 'console', 'wandb' ]
-  # logger: [ 'console', 'wandb' ]
+  # logger: [ 'console' ]
 
 
 agent_proxy:
@@ -28,3 +28,9 @@ es_manager:
   val:
     env_configs:
       tags: ["WebShop"]
+
+algorithm:
+  gamma: 1.0
+  lam: 1.0
+  high_level_gamma: 0.95
+  adv_estimator: gae

@@ -56,13 +56,8 @@ from verl.utils.torch_functional import masked_mean
 from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 
-# breakpoint()
-def fill_after_first_one(response_mask: torch.Tensor):
-    cumsum = torch.cumsum(response_mask, dim=1)
-    return (cumsum > 0).to(response_mask.dtype).to(response_mask.device)
 
-
-def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0):
+def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, multi_turn_gae=False):
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch:
         data.batch["response_mask"] = compute_response_mask(data)
@@ -70,23 +65,22 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
     # TODO: add other ways to estimate advantages
     if adv_estimator == AdvantageEstimator.GAE:
         if bi_level_gae:
-            if high_level_gamma == 0.0:
-                advantages, returns = core_algos.compute_gae_advantage_return_multi_turn(
+            advantages, returns = core_algos.compute_bi_level_gae_advantage_return(
+                token_level_rewards=data.batch["token_level_rewards"],
+                values=data.batch["values"],
+                loss_mask=data.batch["response_mask"],
+                gamma=gamma,
+                lam=lam,
+                high_level_gamma=high_level_gamma,
+                response_mask=data.batch["response_mask"],
+            )
+        elif multi_turn_gae:
+            advantages, returns = core_algos.compute_gae_advantage_return_multi_turn(
                     token_level_rewards=data.batch["token_level_rewards"],
                     values=data.batch["values"],
                     response_mask=data.batch["response_mask"],
                     gamma=gamma,
                     lam=lam,
-                )
-            else:
-                advantages, returns = core_algos.compute_bi_level_gae_advantage_return(
-                    token_level_rewards=data.batch["token_level_rewards"],
-                    values=data.batch["values"],
-                    loss_mask=data.batch["response_mask"],
-                    gamma=gamma,
-                    lam=lam,
-                    high_level_gamma=high_level_gamma,
-                    response_mask=data.batch["response_mask"],
                 )
         else:
             advantages, returns = core_algos.compute_gae_advantage_return(
@@ -437,7 +431,6 @@ class RayAgentTrainer(VerlRayPPOTrainer):
 
         from verl.utils.tracking import Tracking
         # breakpoint()
-        
         logger = Tracking(
             project_name=self.config.trainer.project_name,
             experiment_name=self.config.trainer.experiment_name,
@@ -645,6 +638,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                         multi_turn=True,
                         high_level_gamma=self.config.algorithm.high_level_gamma,
                         bi_level_gae=self.config.algorithm.bi_level_gae,
+                        multi_turn_gae=self.config.algorithm.multi_turn_gae,
                     )
 
                 ##### A very different setting, just here for testing: Can I normalize the advantages to have a mean of 0?

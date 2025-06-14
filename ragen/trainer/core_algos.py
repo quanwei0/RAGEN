@@ -1,5 +1,13 @@
 from verl.trainer.ppo.core_algos import *
 import random
+
+
+# breakpoint()
+def fill_after_first_one(response_mask: torch.Tensor):
+    cumsum = torch.cumsum(response_mask, dim=1)
+    return (cumsum > 0).to(response_mask.dtype).to(response_mask.device)
+
+
 # supported by Kangrui Wang
 def compute_bi_level_gae_advantage_return(
         token_level_rewards: torch.Tensor,

@@ -176,7 +176,7 @@ def run_ppo(config) -> None:
             }
         },
         # num_gpus=2,
-        num_cpus=96,
+        num_cpus=6,
     )
 
     runner = TaskRunner.remote()
