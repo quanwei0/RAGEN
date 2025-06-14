@@ -56,12 +56,16 @@ from verl.utils.torch_functional import masked_mean
 from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 
+# breakpoint()
+def fill_after_first_one(response_mask: torch.Tensor):
+    cumsum = torch.cumsum(response_mask, dim=1)
+    return (cumsum > 0).to(response_mask.dtype).to(response_mask.device)
+
 
 def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0):
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch:
         data.batch["response_mask"] = compute_response_mask(data)
-    # breakpoint()
     # prepare response group
     # TODO: add other ways to estimate advantages
     if adv_estimator == AdvantageEstimator.GAE:

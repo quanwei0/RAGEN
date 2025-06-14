@@ -175,9 +175,8 @@ def run_ppo(config) -> None:
                 # "RAY_DEBUG": "legacy" # used here for simpler breakpoint()
             }
         },
-        _temp_dir="/mnt/data1/zhan9359/ray_tmp",
-        num_gpus=2,
-        num_cpus=20,
+        # num_gpus=2,
+        num_cpus=96,
     )
 
     runner = TaskRunner.remote()

@@ -8,6 +8,7 @@ model_path: Qwen/Qwen2.5-1.5B-Instruct
 trainer:
   experiment_name: webshop
   logger: [ 'console', 'wandb' ]
+  # logger: [ 'console', 'wandb' ]
 
 
 agent_proxy:

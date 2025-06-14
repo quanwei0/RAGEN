@@ -12,14 +12,30 @@ USE_BASE="algorithm.kl_ctrl.kl_coef=0.001 actor_rollout_ref.actor.kl_loss_coef=0
 #     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
 #     trainer.nnodes=1
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1\" trainer.n_gpus_per_node=2 \
-    trainer.experiment_name=webshop-1.5b-ppo-multi-turn-300 $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=True algorithm.high_level_gamma=0.0 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1\" trainer.n_gpus_per_node=2 \
+#     trainer.experiment_name=webshop-1.5b-ppo-multi-turn-300 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=True algorithm.high_level_gamma=0.0 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1
 
 # MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1\" trainer.n_gpus_per_node=2 \
-#     trainer.experiment_name=webshop-1.5b-ppo $USE_PPO $USE_BASE \
+#     trainer.experiment_name=webshop-1.5b-ppo-300 $USE_PPO $USE_BASE \
 #     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
 #     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
 #     trainer.nnodes=1
+
+MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"6,7\" trainer.n_gpus_per_node=2 \
+    trainer.experiment_name=zxn-webshop-1.5b-ppo-bilevel $USE_PPO $USE_BASE \
+    algorithm.bi_level_gae=True algorithm.high_level_gamma=0.95 \
+    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+    trainer.nnodes=1 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=2
+
+
+
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1\" trainer.n_gpus_per_node=2 \
+#     trainer.experiment_name=zxn-webshop-1.5b-ppo-critic_nonmask $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=2
