@@ -8,6 +8,8 @@ model_path: Qwen/Qwen2.5-1.5B-Instruct
 trainer:
   experiment_name: webshop
   total_training_steps: 300
+  logger: [ 'console']
+  # logger: [ 'console', 'wandb' ]
 
 
 agent_proxy:

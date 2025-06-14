@@ -20,4 +20,6 @@ cd verl
 pip install -e .
 cd ..
 
+pip install "ray[default]" debugpy
+
 ```
