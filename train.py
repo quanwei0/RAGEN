@@ -173,7 +173,10 @@ def run_ppo(config) -> None:
                 'VLLM_LOGGING_LEVEL': 'WARN',
                 # "RAY_DEBUG": "legacy" # used here for simpler breakpoint()
             }
-        })
+        },
+        # num_gpus=2,
+        num_cpus=6,
+    )
 
     runner = TaskRunner.remote()
     ray.get(runner.run.remote(config))
