@@ -3,10 +3,11 @@ defaults:
 
 micro_batch_size_per_gpu: 1
 ppo_mini_batch_size: 32
-model_path: Qwen/Qwen2.5-3B-Instruct
+model_path: Qwen/Qwen2.5-1.5B-Instruct
 
 trainer:
   experiment_name: webshop
+  total_training_steps: 300
 
 
 agent_proxy:
