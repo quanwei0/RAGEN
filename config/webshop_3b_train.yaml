@@ -1,0 +1,36 @@
+defaults:
+  - base
+
+micro_batch_size_per_gpu: 1
+ppo_mini_batch_size: 32
+model_path: Qwen/Qwen2.5-3B-Instruct
+
+trainer:
+  experiment_name: webshop
+  logger: [ 'console', 'wandb' ]
+  # logger: [ 'console' ]
+
+
+agent_proxy:
+  max_turn: 9
+  max_actions_per_turn: 1
+
+actor_rollout_ref:
+  rollout:
+    max_model_len: 15000
+    max_num_batched_tokens: 15000
+    tensor_model_parallel_size: 2
+
+es_manager:
+  train:
+    env_configs:
+      tags: ["WebShop"]
+  val:
+    env_configs:
+      tags: ["WebShop"]
+
+algorithm:
+  gamma: 1.0
+  lam: 1.0
+  high_level_gamma: 0.95
+  adv_estimator: gae
