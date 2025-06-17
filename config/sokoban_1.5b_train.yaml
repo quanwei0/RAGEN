@@ -1,0 +1,23 @@
+defaults:
+  - base
+
+micro_batch_size_per_gpu: 1
+ppo_mini_batch_size: 32
+model_path: Qwen/Qwen2.5-1.5B-Instruct
+
+trainer:
+  experiment_name: sokoban-main
+  total_training_steps: 200
+  # logger: [ 'console']
+  logger: [ 'console', 'wandb' ]
+
+
+algorithm:
+  gamma: 1.0
+  lam: 1.0
+  high_level_gamma: 0.95
+  adv_estimator: gae
+  multi_turn_gae: False
+
+critic:
+  mask_obs: True
