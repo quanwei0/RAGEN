@@ -9,7 +9,7 @@ cd ragen
 
 pip install -e .
 pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-pip3 install flash-attn --no-build-isolation
+pip install "flash-attn<2.8.0" --no-build-isolation
 
 git submodule init
 git submodule update
