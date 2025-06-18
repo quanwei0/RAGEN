@@ -228,7 +228,8 @@ def compute_gae_advantage_return_multi_turn(
             returns_reversed.append(returns_gt)
 
         advantages = torch.stack(advantages_reversed[::-1], dim=1)
-        returns = torch.stack(returns_reversed[::-1], dim=1)
+        # returns = torch.stack(returns_reversed[::-1], dim=1)
+        returns = advantages + values
         advantages = verl_F.masked_whiten(advantages, response_mask_f)
     return advantages, returns
 
