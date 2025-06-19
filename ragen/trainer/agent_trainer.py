@@ -57,7 +57,7 @@ from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 
 
-def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, multi_turn_gae=False):
+def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, multi_turn_gae=False, use_claude=False, claude_alg='turn_bonus',alpha=0.8, multi_turn_gae_v2=False, turn_level_method='average'):
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch:
         data.batch["response_mask"] = compute_response_mask(data)
@@ -76,6 +76,43 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
             )
         elif multi_turn_gae:
             advantages, returns = core_algos.compute_gae_advantage_return_multi_turn(
+                    token_level_rewards=data.batch["token_level_rewards"],
+                    values=data.batch["values"],
+                    response_mask=data.batch["response_mask"],
+                    gamma=gamma,
+                    lam=lam,
+                )
+        elif multi_turn_gae_v2:
+            advantages, returns = core_algos.compute_gae_advantage_return_multi_turn_v2(
+                token_level_rewards=data.batch["token_level_rewards"],
+                values=data.batch["values"],
+                response_mask=data.batch["response_mask"],
+                gamma=gamma,
+                lam=lam,
+            )
+            
+        elif use_claude:
+            if claude_alg == 'turn_bonus':
+                advantages, returns = core_algos.compute_multiturn_gae_with_turn_bonuss(
+                    token_level_rewards=data.batch["token_level_rewards"],
+                    values=data.batch["values"],
+                    response_mask=data.batch["response_mask"],
+                    gamma=gamma,
+                    lam=lam,
+                )
+            elif claude_alg == 'hierarchical':
+                advantages, returns = core_algos.compute_multiturn_gae_hierarchical(
+                    token_level_rewards=data.batch["token_level_rewards"],
+                    values=data.batch["values"],
+                    response_mask=data.batch["response_mask"],
+                    gamma=gamma,
+                    lam=lam,
+                    alpha=alpha,
+                    turn_level_method=turn_level_method,
+                    high_level_gamma=high_level_gamma,
+                )
+            elif claude_alg == 'momentum':
+                advantages, returns = core_algos.compute_multiturn_gae_momentum(
                     token_level_rewards=data.batch["token_level_rewards"],
                     values=data.batch["values"],
                     response_mask=data.batch["response_mask"],
@@ -639,6 +676,11 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                         high_level_gamma=self.config.algorithm.high_level_gamma,
                         bi_level_gae=self.config.algorithm.bi_level_gae,
                         multi_turn_gae=self.config.algorithm.multi_turn_gae,
+                        use_claude=self.config.algorithm.use_claude,
+                        claude_alg=self.config.algorithm.claude_alg,
+                        alpha=self.config.algorithm.get("alpha", 0.5),  # for hierarchical
+                        multi_turn_gae_v2=self.config.algorithm.get("multi_turn_gae_v2", False),  # for multi-turn GAE v2
+                        turn_level_method=self.config.algorithm.get("turn_level_method", "average"),  # for hierarchical
                     )
 
                 ##### A very different setting, just here for testing: Can I normalize the advantages to have a mean of 0?

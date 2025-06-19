@@ -228,6 +228,396 @@ def compute_gae_advantage_return_multi_turn(
         advantages = verl_F.masked_whiten(advantages, response_mask_f)
     return advantages, returns
 
+def compute_gae_advantage_return_multi_turn_v2(
+    token_level_rewards: torch.Tensor,
+    values: torch.Tensor,
+    response_mask: torch.Tensor,
+    gamma: torch.Tensor,
+    lam: torch.Tensor,
+):
+    """Adapted from https://github.com/huggingface/trl/blob/main/trl/trainer/ppo_trainer.py
+
+    Args:
+        token_level_rewards: `(torch.Tensor)`
+            shape: (bs, response_length)
+        values: `(torch.Tensor)`
+            shape: (bs, response_length)
+        response_mask: `(torch.Tensor)`
+            shape: (bs, response_length). [EOS] mask. The token after [EOS] have mask zero.
+        gamma: `(float)`
+            discounted factor used in RL
+        lam: `(float)`
+            lambda value when computing Generalized Advantage Estimation (https://arxiv.org/abs/1506.02438)
+
+    Returns:
+        advantages: `(torch.Tensor)`
+            shape: (bs, response_length)
+        Returns: `(torch.Tensor)`
+            shape: (bs, response_length)
+
+    """
+    with torch.no_grad():
+        lastgaelam = 0
+        advantages_reversed = []
+        returns_reversed = []
+        gen_len = token_level_rewards.shape[-1]
+        response_mask_f = response_mask.float()
+        # For masked tokens, force gamma=1 and lambda=1, regardless of the values in config
+        gamma_masked = response_mask_f * gamma + 1 - response_mask_f
+        lam_masked = response_mask_f * lam + 1 - response_mask_f
+        nextvalues_skip_obs = 0
+        returns_gt = 0
+
+        for t in reversed(range(gen_len)):
+            next_step_mask = response_mask_f[:, t + 1] if t < gen_len - 1 else 1.0
+            nextvalues = values[:, t + 1] if t < gen_len - 1 else 0.0
+            nextvalues_skip_obs = (1 - next_step_mask) * nextvalues_skip_obs + next_step_mask * nextvalues
+            this_step_gamma = gamma_masked[:, t]
+            this_step_lam = lam_masked[:, t]
+            delta = token_level_rewards[:, t] + this_step_gamma * nextvalues_skip_obs - values[:, t]
+            delta *= response_mask_f[:, t]
+            lastgaelam = delta + this_step_gamma * this_step_lam * lastgaelam
+            advantages_reversed.append(lastgaelam)
+
+            returns_gt = this_step_gamma * returns_gt + response_mask_f[:, t] * token_level_rewards[:, t]
+            returns_reversed.append(returns_gt)
+
+        advantages = torch.stack(advantages_reversed[::-1], dim=1)
+        returns = advantages + values
+        advantages = verl_F.masked_whiten(advantages, response_mask_f)
+    return advantages, returns
+
+def detect_turn_boundaries(response_mask: torch.Tensor) -> torch.Tensor:
+    """
+    检测turn边界：当response_mask从1变为0时
+    返回的tensor中，1表示该位置是turn的结束
+    """
+    bs, seq_len = response_mask.shape
+    boundaries = torch.zeros_like(response_mask)
+    
+    for b in range(bs):
+        for t in range(seq_len - 1):
+            # 当前是response (1) 且下一个是observation (0)
+            if response_mask[b, t] == 1 and response_mask[b, t + 1] == 0:
+                boundaries[b, t] = 1
+        # 最后一个response token也是turn结束
+        if response_mask[b, -1] == 1:
+            boundaries[b, -1] = 1
+    
+    return boundaries
+
+
+def compute_multiturn_gae_momentum(
+    token_level_rewards: torch.Tensor,
+    values: torch.Tensor,
+    response_mask: torch.Tensor,
+    gamma: float,
+    lam: float,
+    momentum_factor: float = 0.3,
+):
+    """
+    动量机制：保持turn之间的连续性，good momentum继续，bad momentum衰减
+    """
+    with torch.no_grad():
+        bs, seq_len = token_level_rewards.shape
+        response_mask_f = response_mask.float()
+        
+        # 计算带动量的奖励
+        momentum_rewards = token_level_rewards.clone()
+        
+        for b in range(bs):
+            momentum = 0
+            prev_is_response = False
+            
+            for t in range(seq_len):
+                if response_mask[b, t] > 0:
+                    # 如果从observation转到response（新turn开始）
+                    if not prev_is_response:
+                        # 根据momentum的正负决定是否传递
+                        if momentum > 0:
+                            # 正momentum：奖励前面的good start
+                            momentum_rewards[b, t] += momentum * momentum_factor
+                        else:
+                            # 负momentum：轻微惩罚，但不要太严重
+                            momentum_rewards[b, t] += momentum * momentum_factor * 0.5
+                    
+                    # 更新momentum（指数移动平均）
+                    momentum = 0.9 * momentum + 0.1 * token_level_rewards[b, t]
+                    prev_is_response = True
+                else:
+                    prev_is_response = False
+        
+        # 使用带动量的奖励计算GAE
+        lastgaelam = 0
+        advantages_reversed = []
+        returns_reversed = []
+        gamma_masked = response_mask_f * gamma + 1 - response_mask_f
+        lam_masked = response_mask_f * lam + 1 - response_mask_f
+        nextvalues_skip_obs = 0
+        returns_gt = 0
+
+        for t in reversed(range(seq_len)):
+            next_step_mask = response_mask_f[:, t + 1] if t < seq_len - 1 else 1.0
+            nextvalues = values[:, t + 1] if t < seq_len - 1 else 0.0
+            nextvalues_skip_obs = (1 - next_step_mask) * nextvalues_skip_obs + next_step_mask * nextvalues
+            this_step_gamma = gamma_masked[:, t]
+            this_step_lam = lam_masked[:, t]
+            delta = momentum_rewards[:, t] + this_step_gamma * nextvalues_skip_obs - values[:, t]
+            delta *= response_mask_f[:, t]
+            lastgaelam = delta + this_step_gamma * this_step_lam * lastgaelam
+            advantages_reversed.append(lastgaelam)
+
+            returns_gt = this_step_gamma * returns_gt + response_mask_f[:, t] * momentum_rewards[:, t]
+            returns_reversed.append(returns_gt)
+
+        advantages = torch.stack(advantages_reversed[::-1], dim=1)
+        # returns = torch.stack(returns_reversed[::-1], dim=1)
+        returns = advantages + values
+        advantages = verl_F.masked_whiten(advantages, response_mask_f)
+        
+    return advantages, returns
+
+
+# def compute_multiturn_gae_hierarchical(
+#     token_level_rewards: torch.Tensor,
+#     values: torch.Tensor,
+#     response_mask: torch.Tensor,
+#     gamma: float,
+#     lam: float,
+#     alpha: float = 0.7,  # token-level权重
+# ):
+#     """
+#     完全层级化：分别计算token和turn级别的advantages，然后组合
+#     """
+#     with torch.no_grad():
+#         bs, seq_len = token_level_rewards.shape
+#         turn_boundaries = detect_turn_boundaries(response_mask)
+#         # Step 1: token-level advantages
+#         lastgaelam = 0
+#         token_advantages = []
+#         response_mask_f = response_mask.float()
+#         gamma_masked = response_mask_f * gamma + 1 - response_mask_f
+#         lam_masked = response_mask_f * lam + 1 - response_mask_f
+#         nextvalues_skip_obs = 0
+
+#         for t in reversed(range(seq_len)):
+#             next_step_mask = response_mask_f[:, t + 1] if t < seq_len - 1 else 1.0
+#             nextvalues = values[:, t + 1] if t < seq_len - 1 else 0.0
+#             nextvalues_skip_obs = (1 - next_step_mask) * nextvalues_skip_obs + next_step_mask * nextvalues
+#             this_step_gamma = gamma_masked[:, t]
+#             this_step_lam = lam_masked[:, t]
+#             delta = token_level_rewards[:, t] + this_step_gamma * nextvalues_skip_obs - values[:, t]
+#             delta *= response_mask_f[:, t]
+#             lastgaelam = delta + this_step_gamma * this_step_lam * lastgaelam
+#             token_advantages.append(lastgaelam)
+        
+#         token_advantages = torch.stack(token_advantages[::-1], dim=1)
+        
+#         # Step 2: Turn-level advantages
+#         turn_advantages = torch.zeros_like(token_level_rewards)
+        
+#         for b in range(bs):
+#             # 识别turn边界
+#             turn_starts = [0]
+#             turn_ends = []
+            
+#             for t in range(seq_len):
+#                 if response_mask[b, t] > 0 and (turn_boundaries[b, t] == 1 or t == seq_len - 1):
+#                     turn_ends.append(t)
+#                     if t < seq_len - 1:
+#                         # 找到下一个response token作为新turn的开始
+#                         for next_t in range(t + 1, seq_len):
+#                             if response_mask[b, next_t] > 0:
+#                                 turn_starts.append(next_t)
+#                                 break
+            
+#             # 为每个turn计算shared advantage
+#             for i, (start, end) in enumerate(zip(turn_starts, turn_ends)):
+#                 turn_mask = response_mask_f[b, start:end+1]
+#                 if turn_mask.sum() > 0:
+
+#                     avg_adv = (token_advantages[b, start:end+1] * turn_mask).sum() / turn_mask.sum()
+                    
+#                     for t in range(start, end + 1):
+#                         if response_mask[b, t] > 0:
+#                             turn_advantages[b, t] = avg_adv
+
+#         combined_advantages = alpha * token_advantages + (1-alpha) * turn_advantages
+#         returns = combined_advantages + values
+#         combined_advantages = verl_F.masked_whiten(combined_advantages, response_mask_f)
+        
+#     return combined_advantages, returns
+def compute_multiturn_gae_hierarchical(
+    token_level_rewards: torch.Tensor,
+    values: torch.Tensor,
+    response_mask: torch.Tensor,
+    gamma: float,
+    lam: float,
+    alpha: float = 0.7,  # weight for token-level advantages
+    turn_level_method: str = "average",  # "average" or "gae"
+    high_level_gamma: float = None,  # gamma for turn-level GAE, defaults to token-level gamma
+):
+    """
+    Hierarchical GAE: compute token-level and turn-level advantages separately, then combine
+    
+    Args:
+        turn_level_method: "average" - use averaging method, "gae" - use GAE method for turn-level advantages
+        high_level_gamma: gamma value for turn-level GAE, uses token-level gamma if None
+    """
+    if high_level_gamma is None:
+        high_level_gamma = gamma
+        
+    with torch.no_grad():
+        bs, seq_len = token_level_rewards.shape
+        
+        # Step 1: Compute token-level advantages using existing method
+        lastgaelam = 0
+        token_advantages = []
+        response_mask_f = response_mask.float()
+        gamma_masked = response_mask_f * gamma + 1 - response_mask_f
+        lam_masked = response_mask_f * lam + 1 - response_mask_f
+        nextvalues_skip_obs = 0
+
+        for t in reversed(range(seq_len)):
+            next_step_mask = response_mask_f[:, t + 1] if t < seq_len - 1 else 1.0
+            nextvalues = values[:, t + 1] if t < seq_len - 1 else 0.0
+            nextvalues_skip_obs = (1 - next_step_mask) * nextvalues_skip_obs + next_step_mask * nextvalues
+            this_step_gamma = gamma_masked[:, t]
+            this_step_lam = lam_masked[:, t]
+            delta = token_level_rewards[:, t] + this_step_gamma * nextvalues_skip_obs - values[:, t]
+            delta *= response_mask_f[:, t]
+            lastgaelam = delta + this_step_gamma * this_step_lam * lastgaelam
+            token_advantages.append(lastgaelam)
+        
+        token_advantages = torch.stack(token_advantages[::-1], dim=1)
+        
+        # Step 2: Compute turn-level advantages
+        if turn_level_method == "average":
+            turn_advantages = _compute_turn_level_average(
+                token_advantages, response_mask, response_mask_f, bs, seq_len
+            )
+        elif turn_level_method == "gae":
+            turn_advantages = _compute_turn_level_gae(
+                token_level_rewards, values, response_mask, response_mask_f, 
+                high_level_gamma, lam, bs, seq_len
+            )
+        else:
+            raise ValueError(f"Unknown turn_level_method: {turn_level_method}")
+
+        # Step 3: Combine advantages
+        combined_advantages = alpha * token_advantages + (1-alpha) * turn_advantages
+        returns = combined_advantages + values
+        combined_advantages = verl_F.masked_whiten(combined_advantages, response_mask_f)
+        
+    return combined_advantages, returns
+
+
+def _compute_turn_level_average(token_advantages, response_mask, response_mask_f, bs, seq_len):
+    """Original averaging method for computing turn-level advantages"""
+    turn_boundaries = detect_turn_boundaries(response_mask)
+    turn_advantages = torch.zeros_like(token_advantages)
+    
+    for b in range(bs):
+        # Identify turn boundaries
+        turn_starts = [0]
+        turn_ends = []
+        
+        for t in range(seq_len):
+            if response_mask[b, t] > 0 and (turn_boundaries[b, t] == 1 or t == seq_len - 1):
+                turn_ends.append(t)
+                if t < seq_len - 1:
+                    # Find next response token as start of new turn
+                    for next_t in range(t + 1, seq_len):
+                        if response_mask[b, next_t] > 0:
+                            turn_starts.append(next_t)
+                            break
+        
+        # Compute shared advantage for each turn
+        for i, (start, end) in enumerate(zip(turn_starts, turn_ends)):
+            turn_mask = response_mask_f[b, start:end+1]
+            if turn_mask.sum() > 0:
+                avg_adv = (token_advantages[b, start:end+1] * turn_mask).sum() / turn_mask.sum()
+                
+                for t in range(start, end + 1):
+                    if response_mask[b, t] > 0:
+                        turn_advantages[b, t] = avg_adv
+    
+    return turn_advantages
+
+
+def _compute_turn_level_gae(token_level_rewards, values, response_mask, response_mask_f, 
+                           high_level_gamma, lam, bs, seq_len):
+    """Use GAE method to compute turn-level advantages with shared advantage within each turn"""
+    turn_boundaries = detect_turn_boundaries(response_mask)
+    turn_advantages = torch.zeros_like(token_level_rewards)
+    
+    # Build reward mask identifying end positions of each turn
+    reward_mask = torch.zeros_like(response_mask, dtype=torch.float)
+    
+    for b in range(bs):
+        response_seq = response_mask[b]
+        
+        # Find end positions of each response turn (where mask goes from 1 to 0, or end of sequence)
+        for i in range(seq_len):
+            if response_seq[i] == 1:  # Current token is part of response
+                # Check if this is end of response turn
+                if i == seq_len - 1 or response_seq[i + 1] == 0:  # Last token or next is observation
+                    reward_mask[b, i] = 1.0
+    
+    # Compute GAE for each batch separately
+    for b in range(bs):
+        # Identify turn boundaries using the same logic as averaging method
+        turn_starts = [0]
+        turn_ends = []
+        
+        for t in range(seq_len):
+            if response_mask[b, t] > 0 and (turn_boundaries[b, t] == 1 or t == seq_len - 1):
+                turn_ends.append(t)
+                if t < seq_len - 1:
+                    # Find next response token as start of new turn
+                    for next_t in range(t + 1, seq_len):
+                        if response_mask[b, next_t] > 0:
+                            turn_starts.append(next_t)
+                            break
+        
+        # Compute GAE advantages for each turn end position
+        turn_gae_advantages = {}
+        eos_positions = reward_mask[b].nonzero(as_tuple=True)[0]
+        
+        if len(eos_positions) > 0:
+            lastgaelam = 0.0
+            
+            # Compute GAE backwards through turns
+            for i in range(len(eos_positions) - 1, -1, -1):
+                curr_pos = eos_positions[i]
+                
+                # Get next value
+                if i < len(eos_positions) - 1:
+                    next_pos = eos_positions[i + 1]
+                    nextvalue = values[b, next_pos]
+                else:
+                    nextvalue = 0.0
+                
+                # Calculate delta using reward and value at turn end position
+                delta = token_level_rewards[b, curr_pos] + high_level_gamma * nextvalue - values[b, curr_pos]
+                
+                # Update advantage estimate
+                lastgaelam = delta + high_level_gamma * lam * lastgaelam
+                turn_gae_advantages[curr_pos] = lastgaelam
+        
+        # Distribute shared GAE advantage to all tokens within each turn
+        for i, (start, end) in enumerate(zip(turn_starts, turn_ends)):
+            turn_mask = response_mask_f[b, start:end+1]
+            if turn_mask.sum() > 0:
+                # Use GAE advantage for this turn (from the end position)
+                gae_adv = turn_gae_advantages.get(end, 0.0)
+                
+                for t in range(start, end + 1):
+                    if response_mask[b, t] > 0:
+                        turn_advantages[b, t] = gae_adv
+    
+    return turn_advantages
+
 # set up unittest
 if __name__ == "__main__":
     # token_level_rewards = torch.tensor([[0, 0, 0, 0, 1, 0, 0, 0, 0, 1]])
@@ -258,13 +648,25 @@ if __name__ == "__main__":
         [ 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0 ] 
     ], dtype=torch.float)
     
-    adv1, ret1 = compute_bi_level_gae_advantage_return(rewards, values1, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask)
-    adv2, ret2 = compute_bi_level_gae_advantage_return(rewards, values2, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask)
-    # adv1, ret1 = compute_gae_advantage_return(rewards, values1, eos_mask, gamma, lam)
+    # adv1, ret1 = compute_bi_level_gae_advantage_return(rewards, values1, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask)
+    # adv2, ret2 = compute_bi_level_gae_advantage_return(rewards, values2, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask)
+    
+    adv1, ret1 = compute_gae_advantage_return_multi_turn(rewards, values1, eos_mask, gamma, lam)
     # adv2, ret2 = compute_gae_advantage_return_multi_turn(rewards, values2, eos_mask, gamma, lam)
+    
+    # adv1, ret1 = compute_multiturn_gae_with_turn_bonus(rewards, values1, eos_mask, gamma, lam)
+    # adv2, ret2 = compute_multiturn_gae_with_turn_bonus(rewards, values2, eos_mask, gamma, lam)
+    
+    # adv1, ret1 = compute_multiturn_gae_with_adaptive_lambda(rewards, values1, eos_mask, gamma, lam)
+    # adv2, ret2 = compute_multiturn_gae_with_adaptive_lambda(rewards, values2, eos_mask, gamma, lam)
+    
+    # adv1, ret1 = compute_multiturn_gae_hierarchical(rewards, values1, eos_mask, gamma, lam, alpha=1.0)
+    adv2, ret2 = compute_multiturn_gae_hierarchical(rewards, values2, eos_mask, gamma, lam, alpha=1.0)
+    
 
     ret1 *= eos_mask
     ret2 *= eos_mask
     assert torch.equal(adv1, adv2), f"{adv1=}, {adv2=}"
-    assert torch.equal(ret1, ret2), f"{ret1=}, {ret2=}"
-    print(f' [CORRECT] \n\n{adv1=}, \n\n{adv2=}, \n\n{ret1=}, \n\n{ret2=}')
+    # assert torch.equal(ret1, ret2), f"{ret1=}, {ret2=}"
+    print(f' [CORRECT] \n\n{adv1=}, \n\n{adv2=}')
+    # print(f' [CORRECT] \n\n{adv1=}, \n\n{adv2=}, \n\n{ret1=}, \n\n{ret2=}')

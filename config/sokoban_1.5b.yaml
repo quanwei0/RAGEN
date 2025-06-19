@@ -1,0 +1,8 @@
+defaults:
+  - base
+ 
+trainer:
+  experiment_name: sokoban-main
+
+
+model_path: Qwen/Qwen2.5-1.5B-Instruct

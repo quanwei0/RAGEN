@@ -7,6 +7,7 @@ model_path: Qwen/Qwen2.5-1.5B-Instruct
 
 trainer:
   experiment_name: webshop
+  total_training_steps: 350
   logger: [ 'console', 'wandb' ]
   # logger: [ 'console' ]
 
