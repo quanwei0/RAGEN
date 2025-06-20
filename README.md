@@ -41,3 +41,11 @@ conda activate ragen
 
 bash train_ppo.sh
 ```
+
+Done:
+- skip env tokens or not when assigning next_values and accumulating TD error in GAE calcualtion (see `/ragen/trainer/core_algos.py`)
+- mask env tokens in critic update (see `/ragen/workers/critic/dp_critic.py`)
+- compute return using adv + value or cumulative reward (see `/ragen/trainer/core_algos.py`)
+
+To-Do:
+- turn-level + token-level weighted advantage estimation
