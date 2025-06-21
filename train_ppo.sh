@@ -3,6 +3,8 @@ set -e
 export WANDB_API_KEY="810f91e58aa0fd1d03b11c60b0d1cffbb1d941f4"
 export WANDB_ENTITY="rl_agent"
 
+# export WANDB_MODE=offline  # Save offline log
+
 # Section 1: Base Experiments
 USE_GRPO="algorithm.adv_estimator=grpo agent_proxy.reward_normalization.method=mean_std actor_rollout_ref.actor.use_kl_loss=True"
 USE_PPO="algorithm.adv_estimator=gae" # by default.
