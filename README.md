@@ -39,6 +39,7 @@ conda activate ragen
 
 Install Java (if needed)
 ```bash
+cd /opt
 wget https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jdk_x64_linux_hotspot_21.0.1_12.tar.gz
 
 sudo tar -xzf OpenJDK21U-jdk_x64_linux_hotspot_21.0.1_12.tar.gz
