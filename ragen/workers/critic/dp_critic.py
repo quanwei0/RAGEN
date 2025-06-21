@@ -36,6 +36,7 @@ from verl.workers.critic import BasePPOCritic
 
 from peft import PeftModel
 
+from ragen.trainer.core_algos import fill_after_first_one
 
 __all__ = ["DataParallelPPOCritic"]
 
@@ -221,7 +222,7 @@ class DataParallelPPOCritic(BasePPOCritic):
                     self.gradient_accumulation = self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
 
                 self.critic_optimizer.zero_grad()
-
+                
                 for data in micro_batches:
                     # Support all devices
                     if isinstance(data, DataProto):
@@ -234,9 +235,11 @@ class DataParallelPPOCritic(BasePPOCritic):
                     returns = data["returns"]
                     response_length = responses.size(1)
 
-                    response_mask = data["response_mask"]
+                    if self.config.mask_obs:
+                        response_mask = data["response_mask"]
+                    else:
+                        response_mask = fill_after_first_one(data["response_mask"])
                     # eos_mask = attention_mask[:, -response_length - 1:-1]
-
                     vpreds = self._forward_micro_batch(data)
 
                     # assert not torch.any(torch.isnan(vpreds)).item()
