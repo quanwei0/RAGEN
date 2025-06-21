@@ -3,6 +3,9 @@
 # Exit on error
 set -e
 
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate ragen
+
 echo "Setting up webshop..."
 echo "NOTE: please run scripts/setup_ragen.sh before running this script"
 
@@ -40,10 +43,17 @@ python scripts/download_data.py
 print_step "Downloading full data set..."
 conda install conda-forge::gdown
 mkdir -p external/webshop-minimal/webshop_minimal/data/full
-cd external/webshop-minimal/webshop_minimal/data/full
-gdown https://drive.google.com/uc?id=1A2whVgOO0euk5O13n2iYDM0bQRkkRduB # items_shuffle
-gdown https://drive.google.com/uc?id=1s2j6NgHljiZzQNL3veZaAiyW_qDEgBNi # items_ins_v2
-cd ../../../../..
+# cd external/webshop-minimal/webshop_minimal/data/full
+# gdown https://drive.google.com/uc?id=1A2whVgOO0euk5O13n2iYDM0bQRkkRduB # items_shuffle
+# gdown https://drive.google.com/uc?id=1s2j6NgHljiZzQNL3veZaAiyW_qDEgBNi # items_ins_v2
+# cd ../../../../..
+
+huggingface-cli download \
+  --repo-type dataset \
+  --local-dir ./external/webshop-minimal/webshop_minimal/data/full \
+  quanwei0/webshop-minimal \
+  items_ins_v2.json \
+  items_shuffle.json
 
 echo -e "${GREEN}Installation completed successfully!${NC}"
 echo "To activate the environment, run: conda activate ragen"
