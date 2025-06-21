@@ -16,88 +16,88 @@ USE_BASE="algorithm.kl_ctrl.kl_coef=0.001 actor_rollout_ref.actor.kl_loss_coef=0
 #     trainer.nnodes=1
 #     actor_rollout_ref.rollout.tensor_model_parallel_size=4
 
-# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
-#     trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae $USE_PPO $USE_BASE \
-#     algorithm.bi_level_gae=True algorithm.high_level_gamma=0.0 \
-#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-#     trainer.nnodes=1
-#     actor_rollout_ref.rollout.tensor_model_parallel_size=4
+MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+    trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae $USE_PPO $USE_BASE \
+    algorithm.bi_level_gae=True algorithm.high_level_gamma=0.95 \
+    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+    trainer.nnodes=1
+    actor_rollout_ref.rollout.tensor_model_parallel_size=4
 
 ################################################################################################################################################
 # qwen2.5 1.5b webshop
 
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_True_v2 $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=True \
-    algorithm.multi_turn_gae=True &
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_True_v2 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=True \
+#     algorithm.multi_turn_gae=True &
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_True_v2 $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=True \
-    algorithm.multi_turn_gae=True \
-
-
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_True $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=False \
-    algorithm.multi_turn_gae=True &
-
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_True $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=False \
-    algorithm.multi_turn_gae=True \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_True_v2 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=True \
+#     algorithm.multi_turn_gae=True \
 
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_False $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=False \
-    algorithm.multi_turn_gae=False &
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_True $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=False \
+#     algorithm.multi_turn_gae=True &
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_False $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=False \
-    algorithm.multi_turn_gae=False \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_True $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=False \
+#     algorithm.multi_turn_gae=True \
 
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_False $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=True \
-    algorithm.multi_turn_gae=False &
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_False $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=False \
+#     algorithm.multi_turn_gae=False &
 
-MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_False $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
-    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
-    trainer.nnodes=1 \
-    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    critic.mask_obs=True \
-    algorithm.multi_turn_gae=False \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_False_MTGAE_False $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=False \
+#     algorithm.multi_turn_gae=False \
+
+
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_False $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=True \
+#     algorithm.multi_turn_gae=False &
+
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-critic_mask_True_MTGAE_False $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=False algorithm.high_level_gamma=0.95 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     critic.mask_obs=True \
+#     algorithm.multi_turn_gae=False \
