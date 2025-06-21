@@ -60,6 +60,8 @@ cd RAGEN
 conda activate ragen
 
 bash train_ppo.sh
+bash train_ppo_bilevel.sh
+bash train_ppo_multi_turn.sh
 ```
 
 Done:
