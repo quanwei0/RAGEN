@@ -1,8 +1,8 @@
 # Multi-Turn RL for LLM Agents
 
-## Installation
-
 We build our codebase upon [RAGEN](https://github.com/RAGEN-AI/RAGEN).
+
+## Installation
 
 To get started quickly, run the following scripts:
 ```bash
@@ -12,7 +12,7 @@ bash scripts/setup_webshop.sh
 
 Note:
 - For manual setup instructions, refer to `scripts/setup_ragen.md`.
-- Ensure that the flash-attention package version is less than 2.8.0.
+- Ensure that the `flash-attention` package version is less than 2.8.0.
 - A Java environment is required to run WebShop experiments.
 - In `scripts/setup_webshop.sh`, dataset files need be downloaded from Google Drive. If gdown is not available, you can manually download the files using:
   ```bash
@@ -26,7 +26,7 @@ Note:
     items_ins_v2.json \
     items_shuffle.json
   ```
-- If you encounter issues with the httpx package, try `pip install httpx==0.23.3`
+- If you encounter issues with the `httpx` package, try `pip install httpx==0.23.3`.
 
 Install Conda (if needed)
 ```bash
@@ -64,6 +64,8 @@ bash train_ppo_bilevel.sh
 bash train_ppo_multi_turn.sh
 ```
 
+## Roadmap
+
 Done:
 - skip env tokens or not when assigning next_values and accumulating TD error in GAE calcualtion (see `/ragen/trainer/core_algos.py`)
 - mask env tokens in critic update (see `/ragen/workers/critic/dp_critic.py`)
@@ -71,3 +73,4 @@ Done:
 
 To-Do:
 - turn-level + token-level weighted advantage estimation
+
