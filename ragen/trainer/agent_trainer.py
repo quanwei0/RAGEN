@@ -57,7 +57,7 @@ from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 
 
-def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, multi_turn_gae=False):
+def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, high_level_lam=1.0,multi_turn_gae=False):
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch:
         data.batch["response_mask"] = compute_response_mask(data)
@@ -72,6 +72,7 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
                 gamma=gamma,
                 lam=lam,
                 high_level_gamma=high_level_gamma,
+                high_level_lam=high_level_lam,
                 response_mask=data.batch["response_mask"],
             )
         elif multi_turn_gae:
@@ -637,6 +638,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                         norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                         multi_turn=True,
                         high_level_gamma=self.config.algorithm.high_level_gamma,
+                        high_level_lam=self.config.algorithm.high_level_lam,
                         bi_level_gae=self.config.algorithm.bi_level_gae,
                         multi_turn_gae=self.config.algorithm.multi_turn_gae,
                     )

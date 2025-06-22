@@ -13,15 +13,85 @@ USE_BASE="algorithm.kl_ctrl.kl_coef=0.001 actor_rollout_ref.actor.kl_loss_coef=0
 ################################################################################################################################################
 # qwen2.5 1.5b webshop
 
-EXPERIMENT_NAME="qw-webshop-1.5b-ppo-bilevel-gae"
 
-nohup env \
+# # nohup env \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam1 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam1.log &
+#     # > $EXPERIMENT_NAME.log 2>&1 &
+
+# # nohup env \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam1 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam1.log &
+#     # > $EXPERIMENT_NAME.log 2>&1 &
+
+# # nohup env \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam1 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam1.log &
+#     # > $EXPERIMENT_NAME.log 2>&1 &
+
+# # nohup env \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam1 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam1.log &
+#     # > $EXPERIMENT_NAME.log 2>&1 &
+
+
+# # nohup env \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam0.95 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam0.95.log &
+#     # > $EXPERIMENT_NAME.log 2>&1 &
+
+# # nohup env \
+# MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+#     trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam0.95 $USE_PPO $USE_BASE \
+#     algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
+#     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+#     trainer.nnodes=1 \
+#     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+#     # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma1-lam0.95.log &
+#     # > $EXPERIMENT_NAME.log 2>&1 &
+
+# nohup env \
 MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=$EXPERIMENT_NAME $USE_PPO $USE_BASE \
-    algorithm.bi_level_gae=True algorithm.high_level_gamma=0.95 \
+    trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam0.95 $USE_PPO $USE_BASE \
+    algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
     trainer.nnodes=1 \
     actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
-    2>&1 | tee $EXPERIMENT_NAME.log &
+    # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam0.95.log &
+    # > $EXPERIMENT_NAME.log 2>&1 &
+
+# nohup env \
+MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"0,1,2,3\" trainer.n_gpus_per_node=4 \
+    trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam0.95 $USE_PPO $USE_BASE \
+    algorithm.bi_level_gae=True algorithm.high_level_gamma=1 algorithm.high_level_lam=1 \
+    es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
+    trainer.nnodes=1 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=4 \
+    # 2>&1 | tee qw-webshop-1.5b-ppo-bilevel-gae-gamma0.95-lam0.95.log &
     # > $EXPERIMENT_NAME.log 2>&1 &
 

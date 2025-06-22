@@ -16,6 +16,7 @@ def compute_bi_level_gae_advantage_return(
         gamma: float,
         lam: float,
         high_level_gamma: float,
+        high_level_lam: float,
         response_mask: torch.Tensor = None
     ):
     """Modified GAE calculation that compute two level of advantage and return:
@@ -96,7 +97,7 @@ def compute_bi_level_gae_advantage_return(
                 delta = updated_reward[b, curr_pos] + high_level_gamma * nextvalue - values[b, curr_pos]
                 
                 # Update advantage estimate
-                lastgaelam = delta + high_level_gamma * lam * lastgaelam
+                lastgaelam = delta + high_level_gamma * high_level_lam * lastgaelam
                 advantages[b, curr_pos] = lastgaelam
             
             for i, pos in enumerate(eos_positions):
