@@ -56,7 +56,7 @@ MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train syste
 
 # nohup env \
 MKL_SERVICE_FORCE_INTEL=1 python train.py --config-name webshop_1.5b_train system.CUDA_VISIBLE_DEVICES=\"4,5,6,7\" trainer.n_gpus_per_node=4 \
-    trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-hlllam-1-lllam-0.95 $USE_PPO $USE_BASE \
+    trainer.experiment_name=qw-webshop-1.5b-ppo-bilevel-gae-hlllam-0.95-lllam-0.95 $USE_PPO $USE_BASE \
     algorithm.bi_level_gae=True algorithm.high_level_lam=0.95 algorithm.lam=0.95 \
     es_manager.train.env_groups=2 es_manager.train.group_size=16 es_manager.train.env_configs.n_groups=[2] \
     trainer.nnodes=1 \
