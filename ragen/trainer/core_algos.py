@@ -48,24 +48,31 @@ def compute_bi_level_gae_advantage_return(
     with torch.no_grad():
         token_level_rewards = token_level_rewards.float()
         
-        ##########################################################################################
-        # Determine eos positions based on response_mask if provided
+        # Example:
+        # response_mask = [0,0,0,1,1,1,0,0,1,1,1,1,0,0,0,1,1,1]
+        # reward_mask   = [0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,1]
+
         if response_mask is not None:
-            # Use response_mask to find turn boundaries
-            # Find the last token of each response turn (where response_mask goes from 1 to 0)
             batch_size, seq_len = response_mask.shape
             reward_mask = torch.zeros_like(response_mask, dtype=torch.float)
-            
+
             for b in range(batch_size):
-                # Find positions where response_mask changes from 1 to 0 (end of response turns)
                 response_seq = response_mask[b]
-                
-                # Method: find all positions where current token is 1 and next token is 0 (or end of sequence)
-                for i in range(seq_len):
-                    if response_seq[i] == 1:  # Current token is part of response
-                        # Check if this is the end of a response turn
-                        if i == seq_len - 1 or response_seq[i + 1] == 0:  # Last token or next is observation
-                            reward_mask[b, i] = 1.0
+
+                # Identify turn start points: positions where response begins (0 → 1 transition)
+                # This gives the indices of the first token of each response turn
+                turn_starts = ((response_seq[1:] == 1) & (response_seq[:-1] == 0)).nonzero(as_tuple=True)[0]
+
+                # Skip the first turn (typically the response right after the prompt)
+                if turn_starts.numel() > 1:
+                    turn_starts = turn_starts[1:]
+
+                # Assign reward at the environment token before each turn (i.e., turn_starts - 1)
+                reward_mask[b, turn_starts - 1] = 1.0
+
+                # If the last token is part of a response and is at the end of the sequence, assign reward there
+                last_pos = (response_seq == 1).nonzero(as_tuple=True)[0][-1:]
+                reward_mask[b, last_pos] = (last_pos == seq_len - 1).float()
         else:
             # Use traditional reward mask
             reward_mask = token_level_rewards.bool()
