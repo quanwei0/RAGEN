@@ -50,7 +50,7 @@ def compute_bi_level_gae_advantage_return(
         
         # Example:
         # response_mask = [0,0,0,1,1,1,0,0,1,1,1,1,0,0,0,1,1,1]
-        # reward_mask   = [0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,1]
+        # reward_mask   = [0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0]
 
         if response_mask is not None:
             batch_size, seq_len = response_mask.shape
@@ -61,18 +61,10 @@ def compute_bi_level_gae_advantage_return(
 
                 # Identify turn start points: positions where response begins (0 → 1 transition)
                 # This gives the indices of the first token of each response turn
-                turn_starts = ((response_seq[1:] == 1) & (response_seq[:-1] == 0)).nonzero(as_tuple=True)[0]
+                turn_starts = ((response_seq[1:] == 1) & (response_seq[:-1] == 0)).nonzero(as_tuple=True)[0] + 1
 
-                # Skip the first turn (typically the response right after the prompt)
-                if turn_starts.numel() > 1:
-                    turn_starts = turn_starts[1:]
+                reward_mask[b, turn_starts] = 1.0
 
-                # Assign reward at the environment token before each turn (i.e., turn_starts - 1)
-                reward_mask[b, turn_starts - 1] = 1.0
-
-                # If the last token is part of a response and is at the end of the sequence, assign reward there
-                last_pos = (response_seq == 1).nonzero(as_tuple=True)[0][-1:]
-                reward_mask[b, last_pos] = (last_pos == seq_len - 1).float()
         else:
             # Use traditional reward mask
             reward_mask = token_level_rewards.bool()
@@ -96,12 +88,15 @@ def compute_bi_level_gae_advantage_return(
                     next_pos = eos_positions[i + 1]
                     nextvalue = values[b, next_pos]
                     
+                    # Calculate delta using the next valid token
+                    delta = 0 + high_level_gamma * nextvalue - values[b, curr_pos]                    
+                    
                 else:
                     # Last valid position
                     nextvalue = 0.0
-                
-                # Calculate delta using the next valid token
-                delta = updated_reward[b, curr_pos] + high_level_gamma * nextvalue - values[b, curr_pos]
+
+                    # Calculate delta using the next valid token
+                    delta = updated_reward[b, -1] + high_level_gamma * nextvalue - values[b, curr_pos]
                 
                 # Update advantage estimate
                 lastgaelam = delta + high_level_gamma * high_level_lam * lastgaelam
