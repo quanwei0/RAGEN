@@ -59,9 +59,7 @@ Run the following scripts for PPO training:
 cd RAGEN
 conda activate ragen
 
-bash train_ppo.sh
-bash train_ppo_bilevel.sh
-bash train_ppo_multi_turn.sh
+bash train_ppo_main.sh
 ```
 
 ## Roadmap
