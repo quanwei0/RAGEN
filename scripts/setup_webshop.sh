@@ -55,6 +55,8 @@ huggingface-cli download \
   items_ins_v2.json \
   items_shuffle.json
 
+pip install httpx==0.23.3
+
 echo -e "${GREEN}Installation completed successfully!${NC}"
 echo "To activate the environment, run: conda activate ragen"
 
