@@ -114,7 +114,6 @@ def compute_bi_level_gae_advantage_return(
             for i in range(len(valid_positions) - 1, -1, -1):
                 curr_valid_pos = valid_positions[i]
 
-                           
                 # for last turn
                 if curr_valid_pos >= turn_start_pos[-1]:
                     # for non-last token in the last turn
