@@ -130,13 +130,9 @@ def compute_bi_level_gae_advantage_return(
                 # for non-last turn
                 else:
                     next_valid_pos = valid_positions[i + 1]
-                    if next_valid_pos not in (turn_start_pos).tolist():
-                        # Next valid position
-                        nextvalue = values[b, next_valid_pos]
-                    else:
-                        # Last valid position
-                        nextvalue = 0.0
-                        # lastgaelam = updated_reward[b, next_valid_pos] + gamma * nextvalue - values[b, next_valid_pos]
+                    nextvalue = values[b, next_valid_pos]
+                    
+                    if next_valid_pos in (turn_start_pos).tolist():
                         lastgaelam = turn_level_adv[b, next_valid_pos]
 
                     delta = 0 + gamma * nextvalue - values[b, curr_valid_pos]
