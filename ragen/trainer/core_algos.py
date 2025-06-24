@@ -8,7 +8,7 @@ def fill_after_first_one(response_mask: torch.Tensor):
     return (cumsum > 0).to(response_mask.dtype).to(response_mask.device)
 
 
-# supported by Kangrui Wang
+# adapted and modified from RAGEN
 def compute_bi_level_gae_advantage_return(
         token_level_rewards: torch.Tensor,
         values: torch.Tensor, 
@@ -48,6 +48,7 @@ def compute_bi_level_gae_advantage_return(
     with torch.no_grad():
         token_level_rewards = token_level_rewards.float()
         
+        ##########################################################################################
         # Example:
         # response_mask = [0,0,0,1,1,1,0,0,1,1,1,1,0,0,0,1,1,1]
         # reward_mask   = [0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0]
@@ -77,15 +78,15 @@ def compute_bi_level_gae_advantage_return(
         
         for b in range(batch_size):
             # First, calculate high level advantage and return for eos token of each turn using high level gamma
-            eos_positions = reward_mask[b].nonzero(as_tuple=True)[0]
+            turn_starts = reward_mask[b].nonzero(as_tuple=True)[0]
             lastgaelam = 0.0            
-            for i in range(len(eos_positions) - 1, -1, -1):
-                curr_pos = eos_positions[i]
+            for i in range(len(turn_starts) - 1, -1, -1):
+                curr_pos = turn_starts[i]
                 
                 # Get the next value
-                if i < len(eos_positions) - 1:
+                if i < len(turn_starts) - 1:
                     # Next valid position
-                    next_pos = eos_positions[i + 1]
+                    next_pos = turn_starts[i + 1]
                     nextvalue = values[b, next_pos]
                     
                     # Calculate delta using the next valid token
@@ -102,8 +103,8 @@ def compute_bi_level_gae_advantage_return(
                 lastgaelam = delta + high_level_gamma * high_level_lam * lastgaelam
                 advantages[b, curr_pos] = lastgaelam
             
-            for i, pos in enumerate(eos_positions):
-                returns[b, pos] = advantages[b, pos] + values[b, pos]
+            for i, pos in enumerate(turn_starts):
+                # returns[b, pos] = advantages[b, pos] + values[b, pos]
                 updated_reward[b, pos] = advantages[b, pos] + values[b, pos]
 
             # Then, calculate low level advantage and return for each token using gamma, assume the reward for the sequence now is the return at eos token
@@ -111,7 +112,7 @@ def compute_bi_level_gae_advantage_return(
             valid_positions = loss_mask[b].nonzero(as_tuple=True)[0]
             for i in range(len(valid_positions) - 1, -1, -1):
                 curr_pos = valid_positions[i]
-                if curr_pos not in eos_positions:
+                if i < len(valid_positions) - 1:
                     # Next valid position
                     next_pos = valid_positions[i + 1]
                     nextvalue = values[b, next_pos]
