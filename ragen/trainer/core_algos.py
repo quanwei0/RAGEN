@@ -62,9 +62,9 @@ def compute_bi_level_gae_advantage_return(
 
                 # Identify turn start points: positions where response begins (0 → 1 transition)
                 # This gives the indices of the first token of each response turn
-                turn_starts = ((response_seq[1:] == 1) & (response_seq[:-1] == 0)).nonzero(as_tuple=True)[0] + 1
+                turn_start_pos = ((response_seq[1:] == 1) & (response_seq[:-1] == 0)).nonzero(as_tuple=True)[0] + 1
 
-                reward_mask[b, turn_starts] = 1.0
+                reward_mask[b, turn_start_pos] = 1.0
 
         else:
             # Use traditional reward mask
@@ -78,15 +78,15 @@ def compute_bi_level_gae_advantage_return(
         
         for b in range(batch_size):
             # First, calculate high level advantage and return for eos token of each turn using high level gamma
-            turn_starts = reward_mask[b].nonzero(as_tuple=True)[0]
+            turn_start_pos = reward_mask[b].nonzero(as_tuple=True)[0]
             lastgaelam = 0.0            
-            for i in range(len(turn_starts) - 1, -1, -1):
-                curr_pos = turn_starts[i]
+            for i in range(len(turn_start_pos) - 1, -1, -1):
+                curr_pos = turn_start_pos[i]
                 
                 # Get the next value
-                if i < len(turn_starts) - 1:
+                if i < len(turn_start_pos) - 1:
                     # Next valid position
-                    next_pos = turn_starts[i + 1]
+                    next_pos = turn_start_pos[i + 1]
                     nextvalue = values[b, next_pos]
                     
                     # Calculate delta using the next valid token
@@ -103,7 +103,7 @@ def compute_bi_level_gae_advantage_return(
                 lastgaelam = delta + high_level_gamma * high_level_lam * lastgaelam
                 advantages[b, curr_pos] = lastgaelam
             
-            for i, pos in enumerate(turn_starts):
+            for i, pos in enumerate(turn_start_pos):
                 # returns[b, pos] = advantages[b, pos] + values[b, pos]
                 updated_reward[b, pos] = advantages[b, pos] + values[b, pos]
 
@@ -112,15 +112,28 @@ def compute_bi_level_gae_advantage_return(
             valid_positions = loss_mask[b].nonzero(as_tuple=True)[0]
             for i in range(len(valid_positions) - 1, -1, -1):
                 curr_pos = valid_positions[i]
-                if i < len(valid_positions) - 1:
-                    # Next valid position
-                    next_pos = valid_positions[i + 1]
-                    nextvalue = values[b, next_pos]
+                
+                if curr_pos >= turn_start_pos[-1]:
+                    if curr_pos == len(valid_positions) - 1:
+                        nextvalue = 0.0
+                        lastgaelam = 0.0
+                        delta = updated_reward[b, -1] + gamma * nextvalue - values[b, curr_pos]
+                    else:
+                        next_pos = valid_positions[i + 1]
+                        nextvalue = values[b, next_pos]
+                        delta = 0 + gamma * nextvalue - values[b, curr_pos]
                 else:
-                    # Last valid position
-                    nextvalue = 0.0
-                    lastgaelam = 0.0
-                delta = updated_reward[b, curr_pos] + gamma * nextvalue - values[b, curr_pos]
+                    if curr_pos not in (turn_start_pos - 1).tolist():
+                        # Next valid position
+                        next_pos = valid_positions[i + 1]
+                        nextvalue = values[b, next_pos]
+                    else:
+                        # Last valid position
+                        nextvalue = 0.0
+                        lastgaelam = 0.0
+
+                    delta = updated_reward[b, curr_pos + 1] + gamma * nextvalue - values[b, curr_pos]
+                
                 lastgaelam = delta + gamma * lam * lastgaelam
                 advantages[b, curr_pos] = lastgaelam
                 returns[b, curr_pos] = lastgaelam + values[b, curr_pos]
