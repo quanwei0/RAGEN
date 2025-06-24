@@ -103,44 +103,48 @@ def compute_bi_level_gae_advantage_return(
                 lastgaelam = delta + high_level_gamma * high_level_lam * lastgaelam
                 advantages[b, curr_pos] = lastgaelam
             
-            for i, pos in enumerate(turn_start_pos):
+            turn_level_adv = advantages.clone()
+            # for i, pos in enumerate(turn_start_pos):
                 # returns[b, pos] = advantages[b, pos] + values[b, pos]
-                updated_reward[b, pos] = advantages[b, pos] + values[b, pos]
+                # updated_reward[b, pos] = advantages[b, pos] + values[b, pos]
 
             # Then, calculate low level advantage and return for each token using gamma, assume the reward for the sequence now is the return at eos token
             lastgaelam = 0.0
             valid_positions = loss_mask[b].nonzero(as_tuple=True)[0]
             for i in range(len(valid_positions) - 1, -1, -1):
-                curr_pos = valid_positions[i]
-                
+                curr_valid_pos = valid_positions[i]
+
+                           
                 # for last turn
-                if curr_pos >= turn_start_pos[-1]:
+                if curr_valid_pos >= turn_start_pos[-1]:
+                    # for non-last token in the last turn
+                    if i != len(valid_positions) - 1:
+                        next_valid_pos = valid_positions[i + 1]
+                        nextvalue = values[b, next_valid_pos]
+                        delta = 0 + gamma * nextvalue - values[b, curr_valid_pos]
                     # for last token in the last turn
-                    if i == len(valid_positions) - 1:
+                    else:
                         nextvalue = 0.0
                         lastgaelam = 0.0
-                        delta = updated_reward[b, -1] + gamma * nextvalue - values[b, curr_pos]
-                    # for non-last token in the last turn
-                    else:
-                        next_pos = valid_positions[i + 1]
-                        nextvalue = values[b, next_pos]
-                        delta = 0 + gamma * nextvalue - values[b, curr_pos]
+                        delta = updated_reward[b, -1] + gamma * nextvalue - values[b, curr_valid_pos]
+
                 # for non-last turn
                 else:
-                    if curr_pos not in (turn_start_pos - 1).tolist():
+                    next_valid_pos = valid_positions[i + 1]
+                    if next_valid_pos not in (turn_start_pos).tolist():
                         # Next valid position
-                        next_pos = valid_positions[i + 1]
-                        nextvalue = values[b, next_pos]
+                        nextvalue = values[b, next_valid_pos]
                     else:
                         # Last valid position
                         nextvalue = 0.0
-                        lastgaelam = 0.0
+                        # lastgaelam = updated_reward[b, next_valid_pos] + gamma * nextvalue - values[b, next_valid_pos]
+                        lastgaelam = turn_level_adv[b, next_valid_pos]
 
-                    delta = updated_reward[b, curr_pos + 1] + gamma * nextvalue - values[b, curr_pos]
-                
+                    delta = 0 + gamma * nextvalue - values[b, curr_valid_pos]
+                               
                 lastgaelam = delta + gamma * lam * lastgaelam
-                advantages[b, curr_pos] = lastgaelam
-                returns[b, curr_pos] = lastgaelam + values[b, curr_pos]
+                advantages[b, curr_valid_pos] = lastgaelam
+                returns[b, curr_valid_pos] = lastgaelam + values[b, curr_valid_pos]
 
         advantages = verl_F.masked_whiten(advantages, loss_mask)
     
