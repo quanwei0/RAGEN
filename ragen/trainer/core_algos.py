@@ -326,9 +326,9 @@ def compute_gae_advantage_return_multi_turn(
 
             for i in range(len(valid_positions) - 1, -1, -1):
                 curr_pos = valid_positions[i]
-                next_pos = valid_positions[i + 1]
                 
                 if i != len(valid_positions) - 1:
+                    next_pos = valid_positions[i + 1]
                     nextvalues = values[b, next_pos]
                 else:
                     nextvalues = 0.0
