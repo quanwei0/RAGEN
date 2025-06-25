@@ -1,6 +1,8 @@
 from verl.trainer.ppo.core_algos import *
 import random
-# supported by Kangrui Wang
+
+
+# adapted and modified from ragen.trainer.core_algos
 def compute_bi_level_gae_advantage_return(
         token_level_rewards: torch.Tensor,
         values: torch.Tensor, 
@@ -39,6 +41,7 @@ def compute_bi_level_gae_advantage_return(
     with torch.no_grad():
         token_level_rewards = token_level_rewards.float()
         
+        ##########################################################################################
         # Determine eos positions based on response_mask if provided
         if response_mask is not None:
             # Use response_mask to find turn boundaries
@@ -59,7 +62,8 @@ def compute_bi_level_gae_advantage_return(
         else:
             # Use traditional reward mask
             reward_mask = token_level_rewards.bool()
-            
+        ##########################################################################################
+        
         batch_size, gen_len = token_level_rewards.shape
         advantages = torch.zeros_like(token_level_rewards)
         returns = torch.zeros_like(token_level_rewards)
@@ -115,6 +119,7 @@ def compute_bi_level_gae_advantage_return(
     
     return advantages, returns
 
+# adapted from ragen.trainer.core_algos
 def compute_bi_level_gae_advantage_return_origin(
         token_level_rewards: torch.Tensor,
         values: torch.Tensor, 
@@ -205,7 +210,8 @@ def compute_bi_level_gae_advantage_return_origin(
     
     return advantages, returns
 
-
+# adapted from verl.trainer.ppo.core_algos
+# verl implementation is not compatible with multi-turn settings
 def compute_gae_advantage_return(
     token_level_rewards: torch.Tensor,
     values: torch.Tensor,
@@ -250,6 +256,8 @@ def compute_gae_advantage_return(
         advantages = verl_F.masked_whiten(advantages, response_mask)
     return advantages, returns
 
+# adapted and modified from verl.trainer.ppo.core_algos
+# support multi-turn settings by skipping the observation tokens when computing TD error
 def compute_gae_advantage_return_multi_turn(
     token_level_rewards: torch.Tensor,
     values: torch.Tensor,

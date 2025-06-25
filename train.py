@@ -171,12 +171,9 @@ def run_ppo(config) -> None:
                 'TOKENIZERS_PARALLELISM': 'true',
                 'NCCL_DEBUG': 'WARN',
                 'VLLM_LOGGING_LEVEL': 'WARN',
-                # "RAY_DEBUG_POST_MORTEM": "1"
                 # "RAY_DEBUG": "legacy" # used here for simpler breakpoint()
             }
-        },
-        # num_gpus=2,
-        # num_cpus=6,
+        }
     )
 
     runner = TaskRunner.remote()

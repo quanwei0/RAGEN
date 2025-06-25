@@ -9,7 +9,6 @@ trainer:
   experiment_name: webshop
   total_training_steps: 350
   logger: [ 'console', 'wandb' ]
-  # logger: [ 'console' ]
 
 
 agent_proxy:
@@ -20,7 +19,8 @@ actor_rollout_ref:
   rollout:
     max_model_len: 15000
     max_num_batched_tokens: 15000
-    tensor_model_parallel_size: 2
+    tensor_model_parallel_size: 4
+    
 
 es_manager:
   train:
@@ -34,4 +34,9 @@ algorithm:
   gamma: 1.0
   lam: 1.0
   high_level_gamma: 0.95
+  high_level_lam: 0.95
   adv_estimator: gae
+  multi_turn_gae: False
+
+critic:
+  mask_obs: True

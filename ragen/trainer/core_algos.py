@@ -2,13 +2,13 @@ from verl.trainer.ppo.core_algos import *
 import random
 
 
-# breakpoint()
+# used for masking env tokens in critic update
 def fill_after_first_one(response_mask: torch.Tensor):
     cumsum = torch.cumsum(response_mask, dim=1)
     return (cumsum > 0).to(response_mask.dtype).to(response_mask.device)
 
 
-# supported by Kangrui Wang
+# adapted and modified from RAGEN
 def compute_bi_level_gae_advantage_return(
         token_level_rewards: torch.Tensor,
         values: torch.Tensor, 
@@ -16,6 +16,7 @@ def compute_bi_level_gae_advantage_return(
         gamma: float,
         lam: float,
         high_level_gamma: float,
+        high_level_lam: float,
         response_mask: torch.Tensor = None
     ):
     """Modified GAE calculation that compute two level of advantage and return:
@@ -47,27 +48,29 @@ def compute_bi_level_gae_advantage_return(
     with torch.no_grad():
         token_level_rewards = token_level_rewards.float()
         
-        # Determine eos positions based on response_mask if provided
+        ##########################################################################################
+        # Example:
+        # response_mask = [0,0,0,1,1,1,0,0,1,1,1,1,0,0,0,1,1,1]
+        # reward_mask   = [0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0]
+
         if response_mask is not None:
-            # Use response_mask to find turn boundaries
-            # Find the last token of each response turn (where response_mask goes from 1 to 0)
             batch_size, seq_len = response_mask.shape
             reward_mask = torch.zeros_like(response_mask, dtype=torch.float)
-            
+
             for b in range(batch_size):
-                # Find positions where response_mask changes from 1 to 0 (end of response turns)
                 response_seq = response_mask[b]
-                
-                # Method: find all positions where current token is 1 and next token is 0 (or end of sequence)
-                for i in range(seq_len):
-                    if response_seq[i] == 1:  # Current token is part of response
-                        # Check if this is the end of a response turn
-                        if i == seq_len - 1 or response_seq[i + 1] == 0:  # Last token or next is observation
-                            reward_mask[b, i] = 1.0
+
+                # Identify turn start points: positions where response begins (0 → 1 transition)
+                # This gives the indices of the first token of each response turn
+                turn_start_pos = ((response_seq[1:] == 1) & (response_seq[:-1] == 0)).nonzero(as_tuple=True)[0] + 1
+
+                reward_mask[b, turn_start_pos] = 1.0
+
         else:
             # Use traditional reward mask
             reward_mask = token_level_rewards.bool()
-            
+        ##########################################################################################
+        
         batch_size, gen_len = token_level_rewards.shape
         advantages = torch.zeros_like(token_level_rewards)
         returns = torch.zeros_like(token_level_rewards)
@@ -75,56 +78,75 @@ def compute_bi_level_gae_advantage_return(
         
         for b in range(batch_size):
             # First, calculate high level advantage and return for eos token of each turn using high level gamma
-            eos_positions = reward_mask[b].nonzero(as_tuple=True)[0]
-            lastgaelam = 0.0
-            
-            for i in range(len(eos_positions) - 1, -1, -1):
-                curr_pos = eos_positions[i]
+            turn_start_pos = reward_mask[b].nonzero(as_tuple=True)[0]
+            lastgaelam = 0.0            
+            for i in range(len(turn_start_pos) - 1, -1, -1):
+                curr_pos = turn_start_pos[i]
                 
                 # Get the next value
-                if i < len(eos_positions) - 1:
+                if i < len(turn_start_pos) - 1:
                     # Next valid position
-                    next_pos = eos_positions[i + 1]
+                    next_pos = turn_start_pos[i + 1]
                     nextvalue = values[b, next_pos]
+                    
+                    # Calculate delta using the next valid token
+                    delta = 0 + high_level_gamma * nextvalue - values[b, curr_pos]                    
                     
                 else:
                     # Last valid position
                     nextvalue = 0.0
-                
-                # Calculate delta using the next valid token
-                delta = updated_reward[b, curr_pos] + high_level_gamma * nextvalue - values[b, curr_pos]
+
+                    # Calculate delta using the next valid token
+                    delta = updated_reward[b, -1] + high_level_gamma * nextvalue - values[b, curr_pos]
                 
                 # Update advantage estimate
-                lastgaelam = delta + high_level_gamma * lam * lastgaelam
+                lastgaelam = delta + high_level_gamma * high_level_lam * lastgaelam
                 advantages[b, curr_pos] = lastgaelam
             
-            for i, pos in enumerate(eos_positions):
-                returns[b, pos] = advantages[b, pos] + values[b, pos]
-                updated_reward[b, pos] = advantages[b, pos] + values[b, pos]
-            # updated_reward = token_level_rewards.clone()
+            turn_level_adv = advantages.clone()
+            # for i, pos in enumerate(turn_start_pos):
+                # returns[b, pos] = advantages[b, pos] + values[b, pos]
+                # updated_reward[b, pos] = advantages[b, pos] + values[b, pos]
+
             # Then, calculate low level advantage and return for each token using gamma, assume the reward for the sequence now is the return at eos token
             lastgaelam = 0.0
             valid_positions = loss_mask[b].nonzero(as_tuple=True)[0]
             for i in range(len(valid_positions) - 1, -1, -1):
-                curr_pos = valid_positions[i]
-                if curr_pos not in eos_positions:
-                    # Next valid position
-                    next_pos = valid_positions[i + 1]
-                    nextvalue = values[b, next_pos]
+                curr_valid_pos = valid_positions[i]
+
+                # for last turn
+                if curr_valid_pos >= turn_start_pos[-1]:
+                    # for non-last token in the last turn
+                    if i != len(valid_positions) - 1:
+                        next_valid_pos = valid_positions[i + 1]
+                        nextvalue = values[b, next_valid_pos]
+                        delta = 0 + gamma * nextvalue - values[b, curr_valid_pos]
+                    # for last token in the last turn
+                    else:
+                        nextvalue = 0.0
+                        lastgaelam = 0.0
+                        delta = updated_reward[b, -1] + gamma * nextvalue - values[b, curr_valid_pos]
+
+                # for non-last turn
                 else:
-                    # Last valid position
-                    nextvalue = 0.0
-                    lastgaelam = 0.0
-                delta = updated_reward[b, curr_pos] + gamma * nextvalue - values[b, curr_pos]
+                    next_valid_pos = valid_positions[i + 1]
+                    nextvalue = values[b, next_valid_pos]
+                    
+                    if next_valid_pos in (turn_start_pos).tolist():
+                        lastgaelam = turn_level_adv[b, next_valid_pos]
+
+                    delta = 0 + gamma * nextvalue - values[b, curr_valid_pos]
+                               
                 lastgaelam = delta + gamma * lam * lastgaelam
-                advantages[b, curr_pos] = lastgaelam
-                returns[b, curr_pos] = lastgaelam + values[b, curr_pos]
+                advantages[b, curr_valid_pos] = lastgaelam
+                returns[b, curr_valid_pos] = lastgaelam + values[b, curr_valid_pos]
 
         advantages = verl_F.masked_whiten(advantages, loss_mask)
     
     return advantages, returns
 
-
+# adapted from verl.trainer.ppo.core_algos
+# original verl implementation
 def compute_gae_advantage_return(
     token_level_rewards: torch.Tensor,
     values: torch.Tensor,
@@ -169,6 +191,8 @@ def compute_gae_advantage_return(
         advantages = verl_F.masked_whiten(advantages, response_mask)
     return advantages, returns
 
+# adapted and modified from verl.trainer.ppo.core_algos
+# skip env tokens when assigning next values and accumulating TD error
 def compute_gae_advantage_return_multi_turn(
     token_level_rewards: torch.Tensor,
     values: torch.Tensor,
@@ -207,7 +231,7 @@ def compute_gae_advantage_return_multi_turn(
         gamma_masked = response_mask_f * gamma + 1 - response_mask_f
         lam_masked = response_mask_f * lam + 1 - response_mask_f
         nextvalues_skip_obs = 0
-        returns_gt = 0
+        # returns_gt = 0
 
         for t in reversed(range(gen_len)):
             next_step_mask = response_mask_f[:, t + 1] if t < gen_len - 1 else 1.0
@@ -220,10 +244,11 @@ def compute_gae_advantage_return_multi_turn(
             lastgaelam = delta + this_step_gamma * this_step_lam * lastgaelam
             advantages_reversed.append(lastgaelam)
 
-            returns_gt = this_step_gamma * returns_gt + response_mask_f[:, t] * token_level_rewards[:, t]
-            returns_reversed.append(returns_gt)
+            # returns_gt = this_step_gamma * returns_gt + response_mask_f[:, t] * token_level_rewards[:, t]
+            # returns_reversed.append(returns_gt)
 
         advantages = torch.stack(advantages_reversed[::-1], dim=1)
+        # returns = torch.stack(returns_reversed[::-1], dim=1)
         returns = advantages + values
         advantages = verl_F.masked_whiten(advantages, response_mask_f)
     return advantages, returns
