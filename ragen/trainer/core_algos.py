@@ -155,6 +155,7 @@ def compute_weighted_cross_level_gae_advantage_return(
         lam: float,
         high_level_gamma: float,
         high_level_lam: float,
+        turn_level_weight: float,
         response_mask: torch.Tensor = None
     ):
     """Modified GAE calculation that compute two level of advantage and return:
@@ -284,10 +285,10 @@ def compute_weighted_cross_level_gae_advantage_return(
             for i in range(len(valid_positions) - 1, -1, -1):
                 curr_valid_pos = valid_positions[i]
                 if curr_valid_pos >= turn_start_pos[turn_index]:
-                    advantages[b, curr_valid_pos] = 0.9 * advantages[b, curr_valid_pos] + 0.1 * turn_level_adv[b, turn_start_pos[turn_index]]
+                    advantages[b, curr_valid_pos] = (1 - turn_level_weight) * advantages[b, curr_valid_pos] + turn_level_weight * turn_level_adv[b, turn_start_pos[turn_index]]
                 else:
                     turn_index -= 1
-                    advantages[b, curr_valid_pos] = 0.9 * advantages[b, curr_valid_pos] + 0.1 * turn_level_adv[b, turn_start_pos[turn_index]]
+                    advantages[b, curr_valid_pos] = (1 - turn_level_weight) * advantages[b, curr_valid_pos] + turn_level_weight * turn_level_adv[b, turn_start_pos[turn_index]]
 
         advantages = verl_F.masked_whiten(advantages, loss_mask)
 
