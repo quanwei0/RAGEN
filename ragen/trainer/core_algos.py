@@ -147,7 +147,7 @@ def compute_bi_level_gae_advantage_return(
 
 
 # adapted and modified from RAGEN
-def compute_weighted_bi_level_gae_advantage_return(
+def compute_weighted_cross_level_gae_advantage_return(
         token_level_rewards: torch.Tensor,
         values: torch.Tensor, 
         loss_mask: torch.Tensor,
