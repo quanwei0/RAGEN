@@ -35,8 +35,11 @@ algorithm:
   gamma: 1.0
   lam: 1.0
   high_level_gamma: 0.95
+  high_level_lam: 0.95
   adv_estimator: gae
   multi_turn_gae: False
+  weighted_bi_level_gae: False
+  turn_level_weight: 0.0
 
 critic:
   mask_obs: True
