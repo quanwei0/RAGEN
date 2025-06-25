@@ -62,7 +62,7 @@ conda activate ragen
 bash train_ppo_main.sh
 ```
 
-Currently we support the following GAE algorithms (see `/ragen/trainer/core_algos.py)
+Currently we support the following GAE algorithms (see `/ragen/trainer/core_algos.py`)
 - vanilla single-turn token-level GAE (`compute_gae_advantage_return`)
 - multi-turn token-level GAE with skipping env tokens (`compute_gae_advantage_return_multi_turn`)
 - bilevel GAE from RAGEN (`compute_bi_level_gae_advantage_return_original`)
