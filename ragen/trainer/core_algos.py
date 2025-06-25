@@ -287,6 +287,7 @@ def compute_weighted_bi_level_gae_advantage_return(
                     advantages[b, curr_valid_pos] = 0.9 * advantages[b, curr_valid_pos] + 0.1 * turn_level_adv[b, turn_start_pos[turn_index]]
                 else:
                     turn_index -= 1
+                    advantages[b, curr_valid_pos] = 0.9 * advantages[b, curr_valid_pos] + 0.1 * turn_level_adv[b, turn_start_pos[turn_index]]
 
         advantages = verl_F.masked_whiten(advantages, loss_mask)
 
