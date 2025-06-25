@@ -57,7 +57,7 @@ from ragen.llm_agent.agent_proxy import LLMAgentProxy
 from ragen.utils import GenerationsLogger
 
 
-def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, high_level_lam=1.0,multi_turn_gae=False):
+def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, turn_level_weight=0.0, num_repeat=1, multi_turn=False, norm_adv_by_std_in_grpo=True, bi_level_gae=False, high_level_gamma=1.0, high_level_lam=1.0,multi_turn_gae=False, weighted_cross_level_gae=False):
     # Back-compatible with trainers that do not compute response mask in fit
     if "response_mask" not in data.batch:
         data.batch["response_mask"] = compute_response_mask(data)
@@ -83,6 +83,18 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
                     gamma=gamma,
                     lam=lam,
                 )
+        elif weighted_cross_level_gae:
+            advantages, returns = core_algos.compute_weighted_cross_level_gae_advantage_return(
+                token_level_rewards=data.batch["token_level_rewards"],
+                values=data.batch["values"],
+                loss_mask=data.batch["response_mask"],
+                gamma=gamma,
+                lam=lam,
+                high_level_gamma=high_level_gamma,
+                high_level_lam=high_level_lam,
+                turn_level_weight=turn_level_weight,
+                response_mask=data.batch["response_mask"],
+            )
         else:
             advantages, returns = core_algos.compute_gae_advantage_return(
                 token_level_rewards=data.batch["token_level_rewards"],
@@ -634,6 +646,7 @@ class RayAgentTrainer(VerlRayPPOTrainer):
                         adv_estimator=self.config.algorithm.adv_estimator,
                         gamma=self.config.algorithm.gamma,
                         lam=self.config.algorithm.lam,
+                        turn_level_weight=self.config.algorithm.turn_level_weight,
                         num_repeat=self.config.actor_rollout_ref.rollout.n,
                         norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                         multi_turn=True,

@@ -75,9 +75,12 @@ data:
 algorithm:
   gamma: 1.0
   lam: 1.0
+  turn_level_weight: 0.1
   high_level_gamma: 0.95
   adv_estimator: gae
   bi_level_gae: False
+  multi_turn_gae: False
+  weighted_cross_level_gae: False
   kl_penalty: kl  # how to estimate kl divergence
   kl_ctrl:
     type: fixed
