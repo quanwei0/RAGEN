@@ -62,13 +62,9 @@ conda activate ragen
 bash train_ppo_main.sh
 ```
 
-## Roadmap
-
-Done:
-- skip env tokens or not when assigning next_values and accumulating TD error in GAE calcualtion (see `/ragen/trainer/core_algos.py`)
-- mask env tokens in critic update (see `/ragen/workers/critic/dp_critic.py`)
-- compute return using adv + value or cumulative reward (see `/ragen/trainer/core_algos.py`)
-
-To-Do:
-- turn-level + token-level weighted advantage estimation
-
+Currently we support the following GAE algorithms (see `/ragen/trainer/core_algos.py)
+- vanilla single-turn token-level GAE (`compute_gae_advantage_return`)
+- multi-turn token-level GAE with skipping env tokens (`compute_gae_advantage_return_multi_turn`)
+- bilevel GAE from RAGEN (`compute_bi_level_gae_advantage_return_original`)
+- modified bilevel GAE that supports outcome reward(`compute_bi_level_gae_advantage_return`)
+- weighted cross-level GAE (`compute_weighted_cross_level_gae_advantage_return`)
