@@ -66,5 +66,5 @@ Currently we support the following GAE algorithms (see `/ragen/trainer/core_algo
 - vanilla single-turn token-level GAE (`compute_gae_advantage_return`)
 - multi-turn token-level GAE with skipping env tokens (`compute_gae_advantage_return_multi_turn`)
 - bilevel GAE from RAGEN (`compute_bi_level_gae_advantage_return_original`)
-- modified bilevel GAE that supports outcome reward(`compute_bi_level_gae_advantage_return`)
+- modified bilevel GAE that supports outcome reward and multi-turn setting (`compute_bi_level_gae_advantage_return`)
 - weighted cross-level GAE (`compute_weighted_cross_level_gae_advantage_return`)
