@@ -326,9 +326,9 @@ def compute_gae_advantage_return_multi_turn(
 
             for i in range(len(valid_positions) - 1, -1, -1):
                 curr_pos = valid_positions[i]
-                next_pos = valid_positions[i + 1]
                 
                 if i != len(valid_positions) - 1:
+                    next_pos = valid_positions[i + 1]
                     nextvalues = values[b, next_pos]
                 else:
                     nextvalues = 0.0
@@ -488,7 +488,6 @@ def compute_multiturn_gae_momentum(
             returns_reversed.append(returns_gt)
 
         advantages = torch.stack(advantages_reversed[::-1], dim=1)
-        # returns = torch.stack(returns_reversed[::-1], dim=1)
         returns = advantages + values
         advantages = verl_F.masked_whiten(advantages, response_mask_f)
         
@@ -501,7 +500,7 @@ def compute_multiturn_gae_hierarchical(
     gamma: float,
     lam: float,
     alpha: float = 0.7,  # weight for token-level advantages
-    turn_level_method: str = "average",  # "average" or "gae"
+    turn_level_method: str = "gae",  # "average" or "gae"
     high_level_gamma: float = None,  # gamma for turn-level GAE, defaults to token-level gamma
     high_level_lam: float = None,  # lambda for turn-level GAE, defaults to token-level lam
 ):
@@ -700,35 +699,32 @@ if __name__ == "__main__":
     lam = random.uniform(0.0, 1.0)
 
     rewards = torch.tensor([
-        [ 0.0, 0.0, 0.1, 0.1, 0.1, 0.0, 0.0, 0.1, 1.0, 0.0, 0.0 ]
+        [ 0.0, 0.0, 0.1, 0.1, 0.1, 0.0, 0.0, 0.1, 1.0]
     ], dtype=torch.float)
+    # rewards = torch.tensor([
+    #     [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+    # ], dtype=torch.float)
     
     values1 = torch.tensor([
-        [ random.uniform(-100.0, 100.0), random.random(), 4.0, 5.0, 6.0, random.uniform(-100.0, 0), random.random(), 7.0, 9.0, 0.0, 0.0 ]
+        [ random.uniform(-100.0, 100.0), random.random(), 4.0, 5.0, 6.0, random.uniform(-100.0, 0), random.random(), 7.0, 9.0]
     ], dtype=torch.float)
     
     values2 = torch.tensor([
-        [ random.random(), random.uniform(-100.0, 100.0), 4.0, 5.0, 6.0, random.random(), random.uniform(0.0, 100.0), 7.0, 9.0, 0.0, 0.0 ]
+        [ random.random(), random.uniform(-100.0, 100.0), 4.0, 5.0, 6.0, random.random(), random.uniform(0.0, 100.0), 7.0, 9.0]
     ], dtype=torch.float)
     
     eos_mask = torch.tensor([
-        [ 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0 ] 
+        [ 0, 0, 1, 1, 1, 0, 0, 1, 1] 
     ], dtype=torch.float)
     
     adv1, ret1 = compute_bi_level_gae_advantage_return(rewards, values1, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask, high_level_lam=0.95)
     # adv2, ret2 = compute_bi_level_gae_advantage_return(rewards, values2, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask, high_level_lam=1.0)
     
-    # adv1, ret1 = compute_gae_advantage_return_multi_turn(rewards, values1, eos_mask, gamma, lam)
+    # adv1, ret1 = compute_gae_advantage_return_multi_turn_old(rewards, values1, eos_mask, gamma, lam)
     # adv2, ret2 = compute_gae_advantage_return_multi_turn(rewards, values2, eos_mask, gamma, lam)
     
-    # adv1, ret1 = compute_multiturn_gae_with_turn_bonus(rewards, values1, eos_mask, gamma, lam)
-    # adv2, ret2 = compute_multiturn_gae_with_turn_bonus(rewards, values2, eos_mask, gamma, lam)
-    
-    # adv1, ret1 = compute_multiturn_gae_with_adaptive_lambda(rewards, values1, eos_mask, gamma, lam)
-    # adv2, ret2 = compute_multiturn_gae_with_adaptive_lambda(rewards, values2, eos_mask, gamma, lam)
-    
     # adv1, ret1 = compute_multiturn_gae_hierarchical(rewards, values1, eos_mask, gamma, lam, alpha=1.0, turn_level_method="gae", high_level_gamma=0.95)
-    adv2, ret2 = compute_multiturn_gae_hierarchical(rewards, values2, eos_mask, gamma, lam, alpha=1.0, turn_level_method="gae", high_level_gamma=0.95)
+    adv2, ret2 = compute_multiturn_gae_hierarchical(rewards, values2, eos_mask, gamma, lam, alpha=1.0, turn_level_method="gae", high_level_gamma=0.95, high_level_lam=0.95)
     
 
     # ret1 *= eos_mask
