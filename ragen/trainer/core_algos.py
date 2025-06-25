@@ -284,7 +284,7 @@ def compute_weighted_bi_level_gae_advantage_return(
             for i in range(len(valid_positions) - 1, -1, -1):
                 curr_valid_pos = valid_positions[i]
                 if curr_valid_pos >= turn_start_pos[turn_index]:
-                    advantages[b, curr_valid_pos] = 0.9 * advantages[b, curr_valid_pos] + 0.1 * advantages[b, turn_start_pos[turn_index]]
+                    advantages[b, curr_valid_pos] = 0.9 * advantages[b, curr_valid_pos] + 0.1 * turn_level_adv[b, turn_start_pos[turn_index]]
                 else:
                     turn_index -= 1
 
