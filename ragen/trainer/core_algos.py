@@ -352,6 +352,7 @@ def compute_multiturn_gae_hierarchical(
     alpha: float = 0.7,  # weight for token-level advantages
     turn_level_method: str = "average",  # "average" or "gae"
     high_level_gamma: float = None,  # gamma for turn-level GAE, defaults to token-level gamma
+    high_level_lam: float = None,  # lambda for turn-level GAE, defaults to token-level lam
 ):
     """
     Hierarchical GAE: compute token-level and turn-level advantages separately, then combine
@@ -362,6 +363,8 @@ def compute_multiturn_gae_hierarchical(
     """
     if high_level_gamma is None:
         high_level_gamma = gamma
+    if high_level_lam is None:
+        high_level_lam = lam
         
     with torch.no_grad():
         bs, seq_len = token_level_rewards.shape
@@ -395,7 +398,7 @@ def compute_multiturn_gae_hierarchical(
         elif turn_level_method == "gae":
             turn_advantages = _compute_turn_level_gae(
                 token_level_rewards, values, response_mask, response_mask_f, 
-                high_level_gamma, lam, bs, seq_len
+                high_level_gamma, lam=high_level_lam, bs=bs, seq_len=seq_len
             )
         else:
             raise ValueError(f"Unknown turn_level_method: {turn_level_method}")
@@ -522,8 +525,6 @@ def _compute_turn_level_gae(token_level_rewards, values, response_mask, response
                 
                 # Calculate delta: reward + gamma * next_value - current_value
                 delta = reward + high_level_gamma * next_value - current_value
-                
-                # Update GAE advantage
                 lastgaelam = delta + high_level_gamma * lam * lastgaelam
                 
                 # Assign the same advantage to all tokens in this turn
@@ -563,8 +564,8 @@ if __name__ == "__main__":
         [ 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0 ] 
     ], dtype=torch.float)
     
-    # adv1, ret1 = compute_bi_level_gae_advantage_return(rewards, values1, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask)
-    # adv2, ret2 = compute_bi_level_gae_advantage_return(rewards, values2, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask)
+    adv1, ret1 = compute_bi_level_gae_advantage_return(rewards, values1, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask, high_level_lam=0.95)
+    # adv2, ret2 = compute_bi_level_gae_advantage_return(rewards, values2, eos_mask, gamma, lam, high_level_gamma=0.95, response_mask=eos_mask, high_level_lam=1.0)
     
     # adv1, ret1 = compute_gae_advantage_return_multi_turn(rewards, values1, eos_mask, gamma, lam)
     # adv2, ret2 = compute_gae_advantage_return_multi_turn(rewards, values2, eos_mask, gamma, lam)
@@ -575,8 +576,8 @@ if __name__ == "__main__":
     # adv1, ret1 = compute_multiturn_gae_with_adaptive_lambda(rewards, values1, eos_mask, gamma, lam)
     # adv2, ret2 = compute_multiturn_gae_with_adaptive_lambda(rewards, values2, eos_mask, gamma, lam)
     
-    adv1, ret1 = compute_multiturn_gae_hierarchical(rewards, values1, eos_mask, gamma, lam, alpha=0.9, turn_level_method="gae", high_level_gamma=0.95)
-    adv2, ret2 = compute_multiturn_gae_hierarchical(rewards, values2, eos_mask, gamma, lam, alpha=0.9, turn_level_method="gae", high_level_gamma=0.95)
+    # adv1, ret1 = compute_multiturn_gae_hierarchical(rewards, values1, eos_mask, gamma, lam, alpha=1.0, turn_level_method="gae", high_level_gamma=0.95)
+    adv2, ret2 = compute_multiturn_gae_hierarchical(rewards, values2, eos_mask, gamma, lam, alpha=1.0, turn_level_method="gae", high_level_gamma=0.95)
     
 
     # ret1 *= eos_mask
